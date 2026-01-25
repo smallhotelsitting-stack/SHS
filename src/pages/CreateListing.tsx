@@ -6,6 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Home, Hotel, Upload, X, Image, Video, AlertCircle } from 'lucide-react';
 import { translateToAllLanguages } from '../utils/translations';
 import { DynamicFormRenderer } from '../components/DynamicFormRenderer';
+import { CategoryCarousel } from '../components/CategoryCarousel';
 import type { ListingType, ListingCategory } from '../types/database';
 import type { FormField } from '../components/FormBuilder';
 
@@ -292,42 +293,19 @@ export default function CreateListing() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-4 uppercase tracking-wider">
-              {t('create.propertyType')}
-            </label>
-            <div className="grid grid-cols-2 gap-6">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, category: 'house' })}
-                className={`flex items-center gap-4 p-6 border-2 transition ${
-                  formData.category === 'house'
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
-              >
-                <Home className={`w-8 h-8 ${formData.category === 'house' ? 'text-primary-600' : 'text-neutral-600'}`} />
-                <span className={`font-medium text-lg ${formData.category === 'house' ? 'text-primary-900' : 'text-neutral-900'}`}>
-                  {t('home.house')}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, category: 'hotel' })}
-                className={`flex items-center gap-4 p-6 border-2 transition ${
-                  formData.category === 'hotel'
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
-              >
-                <Hotel className={`w-8 h-8 ${formData.category === 'hotel' ? 'text-primary-600' : 'text-neutral-600'}`} />
-                <span className={`font-medium text-lg ${formData.category === 'hotel' ? 'text-primary-900' : 'text-neutral-900'}`}>
-                  {t('home.hotel')}
-                </span>
-              </button>
-            </div>
-          </div>
+          <CategoryCarousel
+            value={selectedCustomCategoryId || formData.category}
+            onChange={(category) => {
+              setFormData({ ...formData, category: category as ListingCategory });
+            }}
+            customCategories={customCategories}
+            onCustomCategoryChange={(categoryId) => {
+              setSelectedCustomCategoryId(categoryId);
+              if (!categoryId) {
+                setFormData({ ...formData, category: 'house' as ListingCategory });
+              }
+            }}
+          />
 
           <div>
             <label htmlFor="title" className="block text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">
@@ -472,23 +450,11 @@ export default function CreateListing() {
             )}
           </div>
 
-          {customCategories.length > 0 && (
-            <div>
-              <label className="block text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">
-                Custom Category (Optional)
-              </label>
-              <select
-                value={selectedCustomCategoryId || ''}
-                onChange={(e) => setSelectedCustomCategoryId(e.target.value || null)}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-              >
-                <option value="">Select a category...</option>
-                {customCategories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+          {selectedCustomCategoryId && (
+            <div className="border-t border-primary-200 pt-6 mt-6">
+              <p className="text-sm text-primary-600 font-medium mb-3">
+                📝 Custom category fields below
+              </p>
             </div>
           )}
 

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Search, MapPin, Calendar, Hotel, Briefcase, ArrowRight, Star, Shield, Users, CheckCircle, Globe, Mail, Send, X, Home as HomeIcon, SlidersHorizontal } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getTranslatedContent, type ListingTranslations } from '../utils/translations';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
+import { EmptyState } from '../components/EmptyState';
 import PricingSection from '../components/PricingSection';
 import SubscriptionBadge from '../components/SubscriptionBadge';
 import { CreateCategoryModal, AdminCategoryButton, CategoryPill } from '../components/AdminCategoryManager';
@@ -19,6 +20,7 @@ export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { lang } = useParams<{ lang: string }>();
+  const [searchParams] = useSearchParams();
   const currentLang = lang || language;
   const [listings, setListings] = useState<ListingWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,12 +37,23 @@ export default function Home() {
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [selectedCategoryForForm, setSelectedCategoryForForm] = useState<any>(null);
   const [categoryToast, setCategoryToast] = useState('');
+  const [selectedCustomCategory, setSelectedCustomCategory] = useState<any>(null);
   const { profile } = useAuth();
+
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      const customCat = customCategories.find((c) => c.slug === categoryParam);
+      if (customCat) {
+        setSelectedCustomCategory(customCat);
+      }
+    }
+  }, [searchParams, customCategories]);
 
   useEffect(() => {
     fetchListings();
     fetchCustomCategories();
-  }, [combinedFilter, sortBy]);
+  }, [combinedFilter, sortBy, selectedCustomCategory]);
 
   const fetchCustomCategories = async () => {
     const { data, error } = await supabase
@@ -114,7 +127,9 @@ export default function Home() {
       .eq('status', 'active')
       .order('created_at', { ascending: sortBy === 'newest' ? false : true });
 
-    if (combinedFilter === 'hotels') {
+    if (selectedCustomCategory) {
+      query = query.eq('custom_category_id', selectedCustomCategory.id);
+    } else if (combinedFilter === 'hotels') {
       query = query.eq('type', 'offer').eq('category', 'hotel');
     } else if (combinedFilter === 'houses') {
       query = query.eq('type', 'offer').eq('category', 'house');
@@ -319,8 +334,16 @@ export default function Home() {
                   <CategoryPill
                     key={cat.id}
                     name={cat.name}
-                    isSelected={false}
-                    onClick={() => {}}
+                    isSelected={selectedCustomCategory?.id === cat.id}
+                    onClick={() => {
+                      if (selectedCustomCategory?.id === cat.id) {
+                        setSelectedCustomCategory(null);
+                        navigate('/', { replace: true });
+                      } else {
+                        setSelectedCustomCategory(cat);
+                        navigate(`/?category=${cat.slug}`, { replace: true });
+                      }
+                    }}
                     onEdit={() => {
                       setSelectedCategoryForForm(cat);
                       setShowFormBuilder(true);
@@ -436,10 +459,11 @@ export default function Home() {
               <div className="inline-block w-12 h-12 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin"></div>
             </div>
           ) : filteredListings.length === 0 ? (
-            <div className="text-center py-20 bg-cream-50 rounded-3xl">
-              <HomeIcon className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-              <p className="text-neutral-600 text-lg">{t('home.noListings')}</p>
-            </div>
+            <EmptyState
+              type={combinedFilter.includes('sitter') ? 'request' : 'offer'}
+              category={combinedFilter.includes('hotel') ? 'hotel' : 'house'}
+              searchTerm={searchTerm}
+            />
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredListings.slice(0, 8).map((listing) => {
