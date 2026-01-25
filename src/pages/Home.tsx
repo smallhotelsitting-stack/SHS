@@ -8,6 +8,8 @@ import { getTranslatedContent, type ListingTranslations } from '../utils/transla
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import PricingSection from '../components/PricingSection';
 import SubscriptionBadge from '../components/SubscriptionBadge';
+import { CreateCategoryModal, AdminCategoryButton, CategoryPill } from '../components/AdminCategoryManager';
+import { FormBuilder, type FormSchema } from '../components/FormBuilder';
 import type { Listing, Profile } from '../types/database';
 
 type ListingWithAuthor = Listing & { author: Profile };
@@ -28,10 +30,80 @@ export default function Home() {
   const [locationFilter, setLocationFilter] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [customCategories, setCustomCategories] = useState<any[]>([]);
+  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+  const [showFormBuilder, setShowFormBuilder] = useState(false);
+  const [selectedCategoryForForm, setSelectedCategoryForForm] = useState<any>(null);
+  const [categoryToast, setCategoryToast] = useState('');
+  const { profile } = useAuth();
 
   useEffect(() => {
     fetchListings();
+    fetchCustomCategories();
   }, [combinedFilter, sortBy]);
+
+  const fetchCustomCategories = async () => {
+    const { data, error } = await supabase
+      .from('custom_categories')
+      .select('*')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching custom categories:', error);
+    } else {
+      setCustomCategories(data || []);
+    }
+  };
+
+  const handleCreateCategory = async (categoryName: string) => {
+    const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    const { data, error } = await supabase
+      .from('custom_categories')
+      .insert({
+        name: categoryName,
+        slug,
+        description: '',
+        color: 'primary',
+        created_by: user?.id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    setCustomCategories([...customCategories, data]);
+    setSelectedCategoryForForm(data);
+    setShowCreateCategoryModal(false);
+    setCategoryToast(`Category "${categoryName}" created! Now add form fields.`);
+    setTimeout(() => setShowFormBuilder(true), 300);
+    setTimeout(() => setCategoryToast(''), 3000);
+  };
+
+  const handleSaveFormSchema = async (schema: FormSchema) => {
+    if (!selectedCategoryForForm) return;
+
+    const { error } = await supabase
+      .from('form_schemas')
+      .upsert({
+        category_id: selectedCategoryForForm.id,
+        fields: schema.fields,
+        created_by: user?.id,
+      })
+      .select();
+
+    if (error) {
+      throw error;
+    }
+
+    setCategoryToast(`Form schema saved for "${schema.categoryName}"`);
+    setShowFormBuilder(false);
+    setSelectedCategoryForForm(null);
+    setTimeout(() => setCategoryToast(''), 3000);
+  };
 
   const fetchListings = async () => {
     setLoading(true);
@@ -183,6 +255,12 @@ export default function Home() {
             </div>
           </div>
 
+          {categoryToast && (
+            <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg shadow-lg z-40 animate-in fade-in slide-in-from-top">
+              {categoryToast}
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-3 mb-12 items-center">
             <button
               onClick={() => setCombinedFilter('all')}
@@ -234,6 +312,31 @@ export default function Home() {
             >
               {t('home.filterHouseSitters')}
             </button>
+
+            {customCategories.length > 0 && (
+              <div className="flex gap-2 ml-2 pl-2 border-l border-neutral-300">
+                {customCategories.map((cat) => (
+                  <CategoryPill
+                    key={cat.id}
+                    name={cat.name}
+                    isSelected={false}
+                    onClick={() => {}}
+                    onEdit={() => {
+                      setSelectedCategoryForForm(cat);
+                      setShowFormBuilder(true);
+                    }}
+                    isAdmin={profile?.role === 'admin'}
+                  />
+                ))}
+              </div>
+            )}
+
+            {profile?.role === 'admin' && (
+              <AdminCategoryButton
+                onOpenCreateModal={() => setShowCreateCategoryModal(true)}
+                isAdmin={true}
+              />
+            )}
 
             <div className="ml-auto relative">
               <button
@@ -443,6 +546,23 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <CreateCategoryModal
+        isOpen={showCreateCategoryModal}
+        onClose={() => setShowCreateCategoryModal(false)}
+        onSubmit={handleCreateCategory}
+        existingCategories={customCategories.map((c) => c.name)}
+      />
+
+      <FormBuilder
+        isOpen={showFormBuilder}
+        onClose={() => {
+          setShowFormBuilder(false);
+          setSelectedCategoryForForm(null);
+        }}
+        categoryName={selectedCategoryForForm?.name || ''}
+        onSubmit={handleSaveFormSchema}
+      />
 
       {showRoleModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">

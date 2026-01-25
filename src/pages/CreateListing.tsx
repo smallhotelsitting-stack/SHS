@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Home, Hotel, Upload, X, Image, Video } from 'lucide-react';
+import { Home, Hotel, Upload, X, Image, Video, AlertCircle } from 'lucide-react';
 import { translateToAllLanguages } from '../utils/translations';
+import { DynamicFormRenderer } from '../components/DynamicFormRenderer';
 import type { ListingType, ListingCategory } from '../types/database';
+import type { FormField } from '../components/FormBuilder';
 
 export default function CreateListing() {
   const { t } = useLanguage();
@@ -31,6 +33,54 @@ export default function CreateListing() {
 
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [customCategories, setCustomCategories] = useState<any[]>([]);
+  const [selectedCustomCategoryId, setSelectedCustomCategoryId] = useState<string | null>(null);
+  const [formSchema, setFormSchema] = useState<FormField[]>([]);
+  const [customFormData, setCustomFormData] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    fetchCustomCategories();
+  }, []);
+
+  const fetchCustomCategories = async () => {
+    const { data, error } = await supabase
+      .from('custom_categories')
+      .select('*')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching custom categories:', error);
+    } else {
+      setCustomCategories(data || []);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedCustomCategoryId) {
+      setFormSchema([]);
+      setCustomFormData({});
+      return;
+    }
+
+    const fetchFormSchema = async () => {
+      const { data, error } = await supabase
+        .from('form_schemas')
+        .select('fields')
+        .eq('category_id', selectedCustomCategoryId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching form schema:', error);
+        setFormSchema([]);
+      } else {
+        setFormSchema(data?.fields || []);
+        setCustomFormData({});
+      }
+    };
+
+    fetchFormSchema();
+  }, [selectedCustomCategoryId]);
 
   const generateSlug = (title: string) => {
     return title
@@ -133,34 +183,59 @@ export default function CreateListing() {
         emergencyContact: formData.emergencyContact || null
       };
 
+      const listingInsert: any = {
+        title: formData.title,
+        slug: generateSlug(formData.title),
+        description: formData.description,
+        type: formData.type,
+        category: formData.category,
+        location: formData.location,
+        hotel_name: formData.hotelName || null,
+        start_date: formData.startDate,
+        end_date: formData.endDate,
+        images,
+        videos,
+        translations,
+        night_protocol: nightProtocol,
+        author_id: user.id,
+        status: 'active',
+        custom_category_id: selectedCustomCategoryId || null,
+      };
+
       const { data, error: insertError} = await supabase
         .from('listings')
-        .insert({
-          title: formData.title,
-          slug: generateSlug(formData.title),
-          description: formData.description,
-          type: formData.type,
-          category: formData.category,
-          location: formData.location,
-          hotel_name: formData.hotelName || null,
-          start_date: formData.startDate,
-          end_date: formData.endDate,
-          images,
-          videos,
-          translations,
-          night_protocol: nightProtocol,
-          author_id: user.id,
-          status: 'active'
-        })
+        .insert(listingInsert)
         .select()
         .single();
 
       if (insertError) {
         setError(insertError.message);
         setLoading(false);
-      } else {
-        navigate(`/listings/${data.id}`);
+        return;
       }
+
+      if (selectedCustomCategoryId && Object.keys(customFormData).length > 0) {
+        const { data: formDataRecord, error: formDataError } = await supabase
+          .from('listing_form_data')
+          .insert({
+            listing_id: data.id,
+            category_id: selectedCustomCategoryId,
+            form_data: customFormData,
+          })
+          .select()
+          .single();
+
+        if (formDataError) {
+          console.error('Error saving form data:', formDataError);
+        } else {
+          await supabase
+            .from('listings')
+            .update({ form_data_id: formDataRecord.id })
+            .eq('id', data.id);
+        }
+      }
+
+      navigate(`/listings/${data.id}`);
     } catch (err) {
       setError('Failed to create listing. Please try again.');
       setLoading(false);
@@ -396,6 +471,42 @@ export default function CreateListing() {
               </div>
             )}
           </div>
+
+          {customCategories.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wider">
+                Custom Category (Optional)
+              </label>
+              <select
+                value={selectedCustomCategoryId || ''}
+                onChange={(e) => setSelectedCustomCategoryId(e.target.value || null)}
+                className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
+              >
+                <option value="">Select a category...</option>
+                {customCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {formSchema.length > 0 && (
+            <div className="border-t border-primary-200 pt-6 mt-6">
+              <h3 className="text-lg font-bold text-primary-900 mb-4">
+                {customCategories.find((c) => c.id === selectedCustomCategoryId)?.name} Details
+              </h3>
+              <DynamicFormRenderer
+                fields={formSchema}
+                onSubmit={async (formData) => {
+                  setCustomFormData(formData);
+                }}
+                submitButtonText="Validate"
+                isLoading={false}
+              />
+            </div>
+          )}
 
           {formData.category === 'hotel' && formData.type === 'request' && (
             <div className="border-t border-warm-200 pt-6 mt-6">
