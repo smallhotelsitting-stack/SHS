@@ -159,43 +159,30 @@ export function CategoryPill({
   const [showEdit, setShowEdit] = useState(false);
 
   return (
-    <div
-      className={`relative group inline-flex items-center px-4 py-1.5 rounded-full font-medium text-sm cursor-pointer transition-all ${
+    <button
+      className={`relative group inline-flex items-center px-6 py-3 rounded-full font-medium transition-all border-2 ${
         isSelected
-          ? 'bg-primary-600 text-white'
-          : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+          ? 'bg-primary-600 text-white border-primary-600 shadow-md'
+          : 'bg-white text-neutral-700 hover:bg-neutral-50 border-neutral-300'
       }`}
+      onClick={onClick}
     >
-      <button onClick={onClick} className="flex-1">
-        {name}
-      </button>
+      <span>{name}</span>
 
-      {isAdmin && showEdit && (
-        <button
-          onClick={() => {
-            setShowEdit(false);
-            onEdit?.();
-          }}
-          className="ml-2 p-1 hover:bg-primary-700 rounded transition-colors"
-          title="Edit form"
-        >
-          <Edit2 size={14} />
-        </button>
-      )}
-
-      {isAdmin && !showEdit && (
+      {isAdmin && (
         <button
           onMouseEnter={() => setShowEdit(true)}
           onMouseLeave={() => setShowEdit(false)}
-          onClick={() => {
-            setShowEdit(true);
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit?.();
           }}
-          className="ml-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-primary-700 rounded transition-all"
+          className="ml-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
           title="Edit form"
         >
-          <Edit2 size={14} />
+          <Edit2 size={16} />
         </button>
       )}
-    </div>
+    </button>
   );
 }
