@@ -109,17 +109,17 @@ export default function Layout({ children }: LayoutProps) {
               </div>
 
               <div className="flex justify-center items-center">
-  <Link
-    href={`/${currentLang}`}
-    className="flex items-center justify-center px-2"
-  >
-    <img
-      src="/system-images/translogotext.png"
-      alt="Small Hotel Sitting Logo Text"
-      className="h-20 md:h-32 lg:h-40 w-auto object-contain"
-    />
-  </Link>
-</div>
+                <Link
+                  href={`/${currentLang}`}
+                  className="flex items-center justify-center px-2"
+                >
+                  <img
+                    src="/system-images/translogotext.png"
+                    alt="Small Hotel Sitting Logo Text"
+                    className="h-20 md:h-32 lg:h-40 w-auto object-contain"
+                  />
+                </Link>
+              </div>
 
               <div className="flex items-center justify-end space-x-2 md:space-x-3 flex-shrink-0">
               <button
