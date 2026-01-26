@@ -181,12 +181,19 @@ export default function AdminDashboard() {
 
     if (error) {
       console.error('Error updating subscription:', error);
-      alert('Failed to update subscription');
+      alert('Failed to update subscription: ' + error.message);
       return;
     }
 
     const selectedPlan = subscriptionPlans.find(p => p.id === selectedPlanForSub);
     const selectedUser = users.find(u => u.id === selectedUserForSub);
+
+    if (selectedPlan) {
+      await supabase
+        .from('profiles')
+        .update({ subscription_status: selectedPlan.slug })
+        .eq('id', selectedUserForSub);
+    }
 
     await logAuditAction(
       'UPDATE_USER_SUBSCRIPTION',

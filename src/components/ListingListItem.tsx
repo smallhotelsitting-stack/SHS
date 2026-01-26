@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Calendar, Eye } from 'lucide-react';
+import { MapPin, Calendar, Eye, Home, Hotel } from 'lucide-react';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import type { Listing, Profile } from '../types/database';
 
@@ -14,8 +15,11 @@ export function ListingListItem({
   currentLang,
   translatedContent,
 }: ListingListItemProps) {
+  const [imageError, setImageError] = useState(false);
   const colors = getCategoryColor(listing.type, listing.category);
   const label = getCategoryLabel(listing.type, listing.category);
+  const Icon = listing.category === 'hotel' ? Hotel : Home;
+  const hasValidImage = listing.images && (listing.images as string[]).length > 0 && !imageError;
 
   return (
     <Link
@@ -23,15 +27,16 @@ export function ListingListItem({
       className="flex gap-4 p-4 bg-white rounded-xl hover:bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition-all group"
     >
       <div className="flex-shrink-0 w-24 h-24 bg-neutral-200 rounded-lg overflow-hidden">
-        {listing.images && (listing.images as string[]).length > 0 ? (
+        {hasValidImage ? (
           <img
             src={(listing.images as string[])[0]}
             alt={translatedContent.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            onError={() => setImageError(true)}
           />
         ) : (
           <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${colors.gradient}`}>
-            <div className={`w-6 h-6 ${colors.text} opacity-60`} />
+            <Icon className={`w-8 h-8 ${colors.text} opacity-60`} />
           </div>
         )}
       </div>

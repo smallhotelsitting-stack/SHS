@@ -31,6 +31,7 @@ export default function AllListings() {
           author:profiles(*)
         `)
         .eq('status', 'active')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -46,7 +47,11 @@ export default function AllListings() {
 
   const filteredListings = listings.filter((listing) => {
     if (!searchTerm) return true;
-    const content = getTranslatedContent(listing.translations, currentLang);
+    const content = getTranslatedContent(
+      { title: listing.title, description: listing.description, location: listing.location },
+      listing.translations as any,
+      currentLang as 'en' | 'fr' | 'es' | 'de' | 'it' | 'pt' | 'nl'
+    );
     return (
       content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       content.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,7 +90,11 @@ export default function AllListings() {
         ) : (
           <div className="space-y-3">
             {filteredListings.map((listing) => {
-              const content = getTranslatedContent(listing.translations, currentLang);
+              const content = getTranslatedContent(
+                { title: listing.title, description: listing.description, location: listing.location },
+                listing.translations as any,
+                currentLang as 'en' | 'fr' | 'es' | 'de' | 'it' | 'pt' | 'nl'
+              );
               return (
                 <ListingListItem
                   key={listing.id}

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage, languages } from '../contexts/LanguageContext';
-import { PlusCircle, MessageSquare, LogOut, Shield, Menu, X, Globe, Search, MapPin } from 'lucide-react';
+import { Menu, X, Search, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getTranslatedContent } from '../utils/translations';
 import type { Listing } from '../types/database';
@@ -18,7 +18,6 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const { lang } = useParams<{ lang: string }>();
   const currentLang = lang || language;
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -110,7 +109,7 @@ export default function Layout({ children }: LayoutProps) {
 
               <div className="flex justify-center items-center">
                 <Link
-                  href={`/${currentLang}`}
+                  to={`/${currentLang}`}
                   className="flex items-center justify-center px-2"
                 >
                   <img
@@ -197,7 +196,11 @@ export default function Layout({ children }: LayoutProps) {
                   ) : searchResults.length > 0 ? (
                     <div className="py-2">
                       {searchResults.map((listing) => {
-                        const content = getTranslatedContent(listing, currentLang);
+                        const content = getTranslatedContent(
+                          { title: listing.title, description: listing.description, location: listing.location },
+                          listing.translations as any,
+                          currentLang as 'en' | 'fr' | 'es' | 'de' | 'it' | 'pt' | 'nl'
+                        );
                         return (
                           <button
                             key={listing.id}
