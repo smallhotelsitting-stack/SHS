@@ -565,7 +565,7 @@ export default function Home() {
         isOpen={showCreateCategoryModal}
         onClose={() => setShowCreateCategoryModal(false)}
         onSubmit={handleCreateCategory}
-        existingCategories={customCategories.map((c) => c.name)}
+        existingCategories={allCategories.filter((c) => c.type === 'custom').map((c) => c.name)}
       />
 
       <FormBuilder
