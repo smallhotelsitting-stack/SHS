@@ -16,7 +16,7 @@ export default function AdminDashboard() {
   });
   const [users, setUsers] = useState<Profile[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
-  const [activeTab, setActiveTab] = useState<'users' | 'listings' | 'audit' | 'admins' | 'verifications' | 'subscriptions'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'listings' | 'audit' | 'admins' | 'verifications' | 'subscriptions' | 'categories' | 'bulk-import'>('users');
   const [loading, setLoading] = useState(true);
   const [suspendUserId, setSuspendUserId] = useState<string | null>(null);
   const [suspendReason, setSuspendReason] = useState('');
@@ -33,6 +33,10 @@ export default function AdminDashboard() {
   const [selectedUserForSub, setSelectedUserForSub] = useState<string | null>(null);
   const [selectedPlanForSub, setSelectedPlanForSub] = useState<string | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importMessage, setImportMessage] = useState('');
 
   useEffect(() => {
     fetchStats();
@@ -43,7 +47,19 @@ export default function AdminDashboard() {
     fetchVerificationDocs();
     fetchSubscriptions();
     fetchSubscriptionPlans();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from('custom_categories')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setCategories(data);
+    }
+  };
 
   const fetchStats = async () => {
     const [usersCount, listingsCount, threadsCount, messagesCount] = await Promise.all([
@@ -411,6 +427,137 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+    if (!window.confirm(`Delete category "${categoryName}"? This will soft-delete it.`)) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('custom_categories')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', categoryId);
+
+    if (error) {
+      console.error('Error deleting category:', error);
+      alert('Failed to delete category');
+    } else {
+      await logAuditAction('DELETE_CATEGORY', 'custom_categories', categoryId, {}, { name: categoryName });
+      fetchCategories();
+    }
+  };
+
+  const generateCsvTemplate = () => {
+    const headers = ['title', 'description', 'price', 'location', 'image_url', 'category_slug', 'type'];
+    const example = [
+      ['Beautiful Downtown Loft', 'Modern apartment near the city center', '150', 'New York, NY', 'https://example.com/image1.jpg,https://example.com/image2.jpg', 'hotels', 'offer'],
+      ['Professional House Sitter', 'Experienced with all types of properties', '', 'Los Angeles, CA', 'https://example.com/image.jpg', 'house-sitters', 'request'],
+    ];
+    const csv = [headers, ...example].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'listings_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleBulkImport = async (file: File) => {
+    setImportLoading(true);
+    setImportMessage('');
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const row: any = {};
+          headers.forEach((header, index) => {
+            row[header] = values[index] || null;
+          });
+
+          if (!row.title || !row.location) {
+            failCount++;
+            continue;
+          }
+
+          let categoryId = null;
+          if (row.category_slug) {
+            if (['hotels', 'houses', 'hotel-sitters', 'house-sitters'].includes(row.category_slug)) {
+              if (row.category_slug === 'hotels') {
+                row.type = 'offer';
+                row.category = 'hotel';
+              } else if (row.category_slug === 'houses') {
+                row.type = 'offer';
+                row.category = 'house';
+              } else if (row.category_slug === 'hotel-sitters') {
+                row.type = 'request';
+                row.category = 'hotel';
+              } else if (row.category_slug === 'house-sitters') {
+                row.type = 'request';
+                row.category = 'house';
+              }
+            } else {
+              const cat = categories.find((c: any) => c.slug === row.category_slug);
+              if (cat) {
+                categoryId = cat.id;
+              } else {
+                failCount++;
+                continue;
+              }
+            }
+          }
+
+          const images = row.image_url ? row.image_url.split(',').map((url: string) => url.trim()) : [];
+          const startDate = new Date().toISOString();
+          const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+          const { error } = await supabase
+            .from('listings')
+            .insert({
+              title: row.title,
+              description: row.description || '',
+              location: row.location,
+              price: row.price ? parseFloat(row.price) : null,
+              type: row.type || 'offer',
+              category: row.category || 'hotel',
+              custom_category_id: categoryId,
+              images: images,
+              start_date: startDate,
+              end_date: endDate,
+              status: 'active',
+              created_by: user?.id,
+            });
+
+          if (!error) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          failCount++;
+        }
+      }
+
+      setImportMessage(`Import complete: ${successCount} listings added, ${failCount} failed`);
+      if (successCount > 0) {
+        fetchStats();
+        fetchListings();
+      }
+    } catch (err) {
+      setImportMessage('Error reading file. Please ensure it is a valid CSV file.');
+      console.error('Import error:', err);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   const handlePromoteToAdmin = async () => {
     if (!promoteEmail) return;
 
@@ -589,6 +736,26 @@ export default function AdminDashboard() {
                 <Gem className="w-4 h-4" />
                 Subscriptions
               </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`px-6 py-4 font-semibold transition ${
+                activeTab === 'categories'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Categories
+            </button>
+            <button
+              onClick={() => setActiveTab('bulk-import')}
+              className={`px-6 py-4 font-semibold transition ${
+                activeTab === 'bulk-import'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Bulk Import
             </button>
           </div>
         </div>
@@ -975,6 +1142,114 @@ export default function AdminDashboard() {
                   <p>No verification documents found</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'bulk-import' && (
+            <div className="space-y-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900">Bulk Listing Import</h3>
+                <p className="text-sm text-gray-600">Import multiple listings from a CSV file</p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">How to Import</h4>
+                  <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                    <li>Download the CSV template below</li>
+                    <li>Fill in your listing data following the template format</li>
+                    <li>Upload the CSV file to import all listings at once</li>
+                  </ol>
+                </div>
+                <button
+                  onClick={generateCsvTemplate}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm"
+                >
+                  Download CSV Template
+                </button>
+              </div>
+
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <input
+                  type="file"
+                  id="csv-upload"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleBulkImport(file);
+                    }
+                  }}
+                  disabled={importLoading}
+                />
+                <label htmlFor="csv-upload" className="cursor-pointer">
+                  <div className="text-gray-600">
+                    <p className="font-semibold mb-1">Click to upload CSV file</p>
+                    <p className="text-sm">or drag and drop</p>
+                  </div>
+                </label>
+              </div>
+
+              {importMessage && (
+                <div className={`p-4 rounded-lg ${importMessage.includes('complete') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                  {importMessage}
+                </div>
+              )}
+
+              <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
+                <p className="font-semibold mb-2">CSV Format Requirements:</p>
+                <ul className="space-y-1 text-xs">
+                  <li><strong>title:</strong> Listing title (required)</li>
+                  <li><strong>description:</strong> Listing description</li>
+                  <li><strong>price:</strong> Price (optional, numeric)</li>
+                  <li><strong>location:</strong> Location (required)</li>
+                  <li><strong>image_url:</strong> Comma-separated image URLs</li>
+                  <li><strong>category_slug:</strong> hotels, houses, hotel-sitters, house-sitters, or custom category slug</li>
+                  <li><strong>type:</strong> offer or request</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'categories' && (
+            <div className="space-y-4">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900">Custom Categories</h3>
+                <p className="text-sm text-gray-600">Manage all custom categories created for listings</p>
+              </div>
+
+              <div className="grid gap-4">
+                {categories.filter((c: any) => !c.deleted_at).length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <p>No custom categories created yet</p>
+                  </div>
+                ) : (
+                  categories.filter((c: any) => !c.deleted_at).map((category: any) => (
+                    <div
+                      key={category.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition flex justify-between items-start"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-bold text-gray-900">{category.name}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Slug: <span className="font-mono">{category.slug}</span>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Created {formatDate(category.created_at)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteCategory(category.id, category.name)}
+                        className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm ml-4"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 

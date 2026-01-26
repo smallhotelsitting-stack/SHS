@@ -240,9 +240,8 @@ export default function Checkout() {
                   onChange={handleFormChange}
                   required
                   className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
-                  placeholder="4242 4242 4242 4242"
+                  placeholder="1234 5678 9012 3456"
                 />
-                <p className="text-xs text-neutral-500 mt-1">Test card: 4242 4242 4242 4242</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -25,6 +25,7 @@ export interface FormField {
   type: FormFieldType;
   label: string;
   placeholder?: string;
+  helpText?: string;
   required?: boolean;
   options?: string[];
   minLength?: number;
@@ -123,6 +124,19 @@ function DraggableField({
               />
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Help Text (Optional)
+            </label>
+            <input
+              type="text"
+              value={field.helpText || ''}
+              onChange={(e) => updateField({ helpText: e.target.value })}
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm"
+              placeholder="Guidance to help users fill this field"
+            />
+          </div>
 
           {field.type === 'textarea' && (
             <div>
@@ -269,6 +283,9 @@ function FormPreview({ schema }: { schema: FormSchema }) {
               {field.label}
               {field.required && <span className="text-red-600 ml-1">*</span>}
             </label>
+            {field.helpText && (
+              <p className="text-xs text-neutral-500 mb-2">{field.helpText}</p>
+            )}
 
             {field.type === 'text' && (
               <input

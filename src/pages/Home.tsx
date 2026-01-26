@@ -25,37 +25,36 @@ export default function Home() {
   const [listings, setListings] = useState<ListingWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [combinedFilter, setCombinedFilter] = useState<'all' | 'hotels' | 'houses' | 'hotel-sitters' | 'house-sitters'>('all');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [showRoleModal, setShowRoleModal] = useState(false);
-  const [customCategories, setCustomCategories] = useState<any[]>([]);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
   const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [selectedCategoryForForm, setSelectedCategoryForForm] = useState<any>(null);
   const [categoryToast, setCategoryToast] = useState('');
-  const [selectedCustomCategory, setSelectedCustomCategory] = useState<any>(null);
   const { profile } = useAuth();
 
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
-      const customCat = customCategories.find((c) => c.slug === categoryParam);
-      if (customCat) {
-        setSelectedCustomCategory(customCat);
+      const cat = allCategories.find((c) => c.slug === categoryParam);
+      if (cat) {
+        setSelectedCategoryId(cat.id);
       }
     }
-  }, [searchParams, customCategories]);
+  }, [searchParams, allCategories]);
 
   useEffect(() => {
     fetchListings();
-    fetchCustomCategories();
-  }, [combinedFilter, sortBy, selectedCustomCategory]);
+    fetchAllCategories();
+  }, [selectedCategoryId, sortBy]);
 
-  const fetchCustomCategories = async () => {
+  const fetchAllCategories = async () => {
     const { data, error } = await supabase
       .from('custom_categories')
       .select('*')
@@ -63,9 +62,38 @@ export default function Home() {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Error fetching custom categories:', error);
+      console.error('Error fetching categories:', error);
+      setAllCategories([]);
     } else {
-      setCustomCategories(data || []);
+      const builtIn = [
+        { id: 'hotels', name: 'Hotels', slug: 'hotels', type: 'builtin', color: 'primary' },
+        { id: 'houses', name: 'Houses', slug: 'houses', type: 'builtin', color: 'primary' },
+        { id: 'hotel-sitters', name: 'Hotel Sitters', slug: 'hotel-sitters', type: 'builtin', color: 'primary' },
+        { id: 'house-sitters', name: 'House Sitters', slug: 'house-sitters', type: 'builtin', color: 'primary' },
+      ];
+      const custom = (data || []).map((c: any) => ({ ...c, type: 'custom' }));
+      setAllCategories([...builtIn, ...custom]);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!window.confirm('Are you sure you want to delete this category?')) return;
+
+    const { error } = await supabase
+      .from('custom_categories')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', categoryId);
+
+    if (error) {
+      console.error('Error deleting category:', error);
+      alert('Failed to delete category');
+    } else {
+      setCategoryToast('Category deleted');
+      await fetchAllCategories();
+      if (selectedCategoryId === categoryId) {
+        setSelectedCategoryId(null);
+      }
+      setTimeout(() => setCategoryToast(''), 3000);
     }
   };
 
@@ -88,7 +116,7 @@ export default function Home() {
       throw error;
     }
 
-    setCustomCategories([...customCategories, data]);
+    await fetchAllCategories();
     setSelectedCategoryForForm(data);
     setShowCreateCategoryModal(false);
     setCategoryToast(`Category "${categoryName}" created! Now add form fields.`);
@@ -127,16 +155,18 @@ export default function Home() {
       .eq('status', 'active')
       .order('created_at', { ascending: sortBy === 'newest' ? false : true });
 
-    if (selectedCustomCategory) {
-      query = query.eq('custom_category_id', selectedCustomCategory.id);
-    } else if (combinedFilter === 'hotels') {
-      query = query.eq('type', 'offer').eq('category', 'hotel');
-    } else if (combinedFilter === 'houses') {
-      query = query.eq('type', 'offer').eq('category', 'house');
-    } else if (combinedFilter === 'hotel-sitters') {
-      query = query.eq('type', 'request').eq('category', 'hotel');
-    } else if (combinedFilter === 'house-sitters') {
-      query = query.eq('type', 'request').eq('category', 'house');
+    if (selectedCategoryId) {
+      if (selectedCategoryId === 'hotels') {
+        query = query.eq('type', 'offer').eq('category', 'hotel');
+      } else if (selectedCategoryId === 'houses') {
+        query = query.eq('type', 'offer').eq('category', 'house');
+      } else if (selectedCategoryId === 'hotel-sitters') {
+        query = query.eq('type', 'request').eq('category', 'hotel');
+      } else if (selectedCategoryId === 'house-sitters') {
+        query = query.eq('type', 'request').eq('category', 'house');
+      } else {
+        query = query.eq('custom_category_id', selectedCategoryId);
+      }
     }
 
     const { data, error } = await query;
@@ -277,82 +307,42 @@ export default function Home() {
           )}
 
           <div className="flex flex-wrap gap-3 mb-12 items-center">
-            <button
-              onClick={() => setCombinedFilter('all')}
-              className={`px-6 py-3 rounded-full font-medium transition-all ${
-                combinedFilter === 'all'
-                  ? 'bg-primary-700 text-white shadow-md'
-                  : 'bg-white text-neutral-700 hover:bg-neutral-50 border-2 border-neutral-300'
-              }`}
-            >
-              {t('home.filterAll')}
-            </button>
-            <button
-              onClick={() => setCombinedFilter('hotels')}
-              className={`px-6 py-3 rounded-full font-medium transition-all ${
-                combinedFilter === 'hotels'
-                  ? 'bg-hotel-500 text-white shadow-md'
-                  : 'bg-white text-neutral-700 hover:bg-neutral-50 border-2 border-neutral-300'
-              }`}
-            >
-              {t('home.filterHotels')}
-            </button>
-            <button
-              onClick={() => setCombinedFilter('houses')}
-              className={`px-6 py-3 rounded-full font-medium transition-all ${
-                combinedFilter === 'houses'
-                  ? 'bg-house-400 text-white shadow-md'
-                  : 'bg-white text-neutral-700 hover:bg-neutral-50 border-2 border-neutral-300'
-              }`}
-            >
-              {t('home.filterHouses')}
-            </button>
-            <button
-              onClick={() => setCombinedFilter('hotel-sitters')}
-              className={`px-6 py-3 rounded-full font-medium transition-all ${
-                combinedFilter === 'hotel-sitters'
-                  ? 'bg-hotelSitter-400 text-white shadow-md'
-                  : 'bg-white text-neutral-700 hover:bg-neutral-50 border-2 border-neutral-300'
-              }`}
-            >
-              {t('home.filterHotelSitters')}
-            </button>
-            <button
-              onClick={() => setCombinedFilter('house-sitters')}
-              className={`px-6 py-3 rounded-full font-medium transition-all ${
-                combinedFilter === 'house-sitters'
-                  ? 'bg-houseSitter-400 text-white shadow-md'
-                  : 'bg-white text-neutral-700 hover:bg-neutral-50 border-2 border-neutral-300'
-              }`}
-            >
-              {t('home.filterHouseSitters')}
-            </button>
-
-            {customCategories.length > 0 && (
-              <div className="flex gap-2 ml-2 pl-2 border-l border-neutral-300">
-                {customCategories.map((cat) => (
-                  <CategoryPill
-                    key={cat.id}
-                    name={cat.name}
-                    isSelected={selectedCustomCategory?.id === cat.id}
-                    onClick={() => {
-                      if (selectedCustomCategory?.id === cat.id) {
-                        setSelectedCustomCategory(null);
-                        navigate('/', { replace: true });
-                      } else {
-                        setSelectedCustomCategory(cat);
+            {allCategories.map((cat) => (
+              <div key={cat.id} className="relative group">
+                <button
+                  onClick={() => {
+                    if (selectedCategoryId === cat.id) {
+                      setSelectedCategoryId(null);
+                      navigate('/', { replace: true });
+                    } else {
+                      setSelectedCategoryId(cat.id);
+                      if (cat.type === 'custom') {
                         navigate(`/?category=${cat.slug}`, { replace: true });
                       }
+                    }
+                  }}
+                  className={`px-6 py-3 rounded-full font-medium transition-all ${
+                    selectedCategoryId === cat.id
+                      ? 'bg-primary-600 text-white border-primary-600 shadow-md'
+                      : 'bg-white text-neutral-700 hover:bg-neutral-50 border-2 border-neutral-300'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+                {profile?.role === 'admin' && cat.type === 'custom' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCategory(cat.id);
                     }}
-                    onEdit={() => {
-                      setSelectedCategoryForForm(cat);
-                      setShowFormBuilder(true);
-                    }}
-                    isAdmin={profile?.role === 'admin'}
-                  />
-                ))}
+                    className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete category"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
-            )}
+            ))}
 
             {profile?.role === 'admin' && (
               <AdminCategoryButton
@@ -460,8 +450,8 @@ export default function Home() {
             </div>
           ) : filteredListings.length === 0 ? (
             <EmptyState
-              type={combinedFilter.includes('sitter') ? 'request' : 'offer'}
-              category={combinedFilter.includes('hotel') ? 'hotel' : 'house'}
+              type={selectedCategoryId && selectedCategoryId.includes('sitter') ? 'request' : 'offer'}
+              category={selectedCategoryId && selectedCategoryId.includes('hotel') ? 'hotel' : 'house'}
               searchTerm={searchTerm}
             />
           ) : (
