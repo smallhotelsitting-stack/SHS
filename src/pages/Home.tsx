@@ -37,6 +37,8 @@ export default function Home() {
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [selectedCategoryForForm, setSelectedCategoryForForm] = useState<any>(null);
   const [categoryToast, setCategoryToast] = useState('');
+  const [selectedCustomCategory, setSelectedCustomCategory] = useState<any>(null);
+  const [combinedFilter, setCombinedFilter] = useState<'all' | 'standard'>('standard');
   const { profile } = useAuth();
 
   useEffect(() => {
@@ -45,6 +47,10 @@ export default function Home() {
       const cat = allCategories.find((c) => c.slug === categoryParam);
       if (cat) {
         setSelectedCategoryId(cat.id);
+        if (cat.type === 'custom') {
+          setSelectedCustomCategory(cat);
+          setCombinedFilter('all');
+        }
       }
     }
   }, [searchParams, allCategories]);
@@ -313,11 +319,18 @@ export default function Home() {
                   onClick={() => {
                     if (selectedCategoryId === cat.id) {
                       setSelectedCategoryId(null);
+                      setSelectedCustomCategory(null);
+                      setCombinedFilter('standard');
                       navigate('/', { replace: true });
                     } else {
                       setSelectedCategoryId(cat.id);
                       if (cat.type === 'custom') {
+                        setSelectedCustomCategory(cat);
+                        setCombinedFilter('all');
                         navigate(`/?category=${cat.slug}`, { replace: true });
+                      } else {
+                        setSelectedCustomCategory(null);
+                        setCombinedFilter('standard');
                       }
                     }
                   }}
@@ -453,6 +466,7 @@ export default function Home() {
               type={selectedCategoryId && selectedCategoryId.includes('sitter') ? 'request' : 'offer'}
               category={selectedCategoryId && selectedCategoryId.includes('hotel') ? 'hotel' : 'house'}
               searchTerm={searchTerm}
+              customCategory={selectedCustomCategory}
             />
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">

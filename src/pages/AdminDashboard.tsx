@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Users, FileText, MessageSquare, Mail, Shield, Trash2, Ban, Flag, Clock, AlertTriangle, Crown, UserPlus, Gem, Calendar } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Users, FileText, MessageSquare, Mail, Shield, Trash2, Ban, Flag, Clock, AlertTriangle, Crown, UserPlus, Gem, Calendar, Download } from 'lucide-react';
 import { getTranslatedContent, type ListingTranslations } from '../utils/translations';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
+import Papa from 'papaparse';
 import type { Profile, Listing, UserSubscription, SubscriptionPlan } from '../types/database';
 
 export default function AdminDashboard() {
   const { t, formatDate, language } = useLanguage();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalListings: 0,
@@ -447,115 +450,165 @@ export default function AdminDashboard() {
   };
 
   const generateCsvTemplate = () => {
-    const headers = ['title', 'description', 'price', 'location', 'image_url', 'category_slug', 'type'];
-    const example = [
-      ['Beautiful Downtown Loft', 'Modern apartment near the city center', '150', 'New York, NY', 'https://example.com/image1.jpg,https://example.com/image2.jpg', 'hotels', 'offer'],
-      ['Professional House Sitter', 'Experienced with all types of properties', '', 'Los Angeles, CA', 'https://example.com/image.jpg', 'house-sitters', 'request'],
+    const headers = ['Name', 'Listing Title', 'Nationality', 'Experience', 'Country / Location', 'Property Description', 'House Sitting Dates', 'Dates', 'Type of House Sitting'];
+    const examples = [
+      ['Lucia Romano', 'Villa in Tuscany', '', '', 'Tuscany, Italy', 'Beautiful villa with garden and pool', '06/01/2026 – 06/30/2026', '', 'house'],
+      ['', '', '', '', '', '', '', '', ''],
+      ['Maria Rossi', '', 'Italian', '5 years of professional house sitting', '', '', '', 'Giug – Août 2026', 'request'],
     ];
-    const csv = [headers, ...example].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+    const csv = [headers, ...examples].map(row =>
+      row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'listings_template.csv';
-    a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'bulk_import_template.csv';
+    link.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const parseDate = (dateStr: string): { start: string; end: string } => {
+    if (!dateStr) {
+      const now = new Date();
+      return {
+        start: now.toISOString(),
+        end: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+    }
+
+    const dateParts = dateStr.split('–').map(d => d.trim());
+    if (dateParts.length === 2) {
+      try {
+        const [day1, month1, year1] = dateParts[0].split('/');
+        const [day2, month2, year2] = dateParts[1].split('/');
+
+        const startDate = new Date(parseInt(year1), parseInt(month1) - 1, parseInt(day1));
+        const endDate = new Date(parseInt(year2), parseInt(month2) - 1, parseInt(day2));
+
+        return {
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+        };
+      } catch {
+        return {
+          start: new Date().toISOString(),
+          end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        };
+      }
+    }
+
+    return {
+      start: new Date().toISOString(),
+      end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    };
   };
 
   const handleBulkImport = async (file: File) => {
     setImportLoading(true);
     setImportMessage('');
 
-    try {
-      const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-
-      let successCount = 0;
-      let failCount = 0;
-
-      for (let i = 1; i < lines.length; i++) {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
         try {
-          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-          const row: any = {};
-          headers.forEach((header, index) => {
-            row[header] = values[index] || null;
-          });
+          let successCount = 0;
+          let failCount = 0;
 
-          if (!row.title || !row.location) {
-            failCount++;
-            continue;
-          }
+          for (const row of results.data as any[]) {
+            try {
+              const isListing = row['Listing Title'] && row['Listing Title'].trim();
+              const isSitter = row['Name'] && row['Name'].trim() && !isListing;
 
-          let categoryId = null;
-          if (row.category_slug) {
-            if (['hotels', 'houses', 'hotel-sitters', 'house-sitters'].includes(row.category_slug)) {
-              if (row.category_slug === 'hotels') {
-                row.type = 'offer';
-                row.category = 'hotel';
-              } else if (row.category_slug === 'houses') {
-                row.type = 'offer';
-                row.category = 'house';
-              } else if (row.category_slug === 'hotel-sitters') {
-                row.type = 'request';
-                row.category = 'hotel';
-              } else if (row.category_slug === 'house-sitters') {
-                row.type = 'request';
-                row.category = 'house';
-              }
-            } else {
-              const cat = categories.find((c: any) => c.slug === row.category_slug);
-              if (cat) {
-                categoryId = cat.id;
-              } else {
+              if (!isListing && !isSitter) {
                 failCount++;
                 continue;
               }
+
+              let title, description, location, type, category, customCategoryId, startDate, endDate;
+
+              if (isListing) {
+                title = row['Listing Title']?.trim();
+                location = row['Country / Location']?.trim();
+                description = row['Property Description']?.trim() || '';
+                const typeStr = row['Type of House Sitting']?.trim().toLowerCase();
+
+                type = typeStr === 'sitter' ? 'request' : 'offer';
+                category = typeStr === 'hotel' ? 'hotel' : typeStr === 'sitter' ? 'house' : 'house';
+
+                if (typeStr && !['hotel', 'house', 'sitter'].includes(typeStr)) {
+                  const cat = categories.find((c: any) => c.slug === typeStr);
+                  if (cat) {
+                    customCategoryId = cat.id;
+                    category = 'house';
+                    type = 'offer';
+                  }
+                }
+
+                const dates = parseDate(row['House Sitting Dates']?.trim());
+                startDate = dates.start;
+                endDate = dates.end;
+              } else {
+                title = row['Name']?.trim();
+                description = `${row['Nationality']?.trim() || ''} - ${row['Experience']?.trim() || ''}`.trim();
+                location = 'Online';
+                type = 'request';
+                category = 'house';
+
+                const dates = parseDate(row['Dates']?.trim());
+                startDate = dates.start;
+                endDate = dates.end;
+              }
+
+              if (!title || !location) {
+                failCount++;
+                continue;
+              }
+
+              const { error } = await supabase.from('listings').insert({
+                title,
+                description,
+                location,
+                type,
+                category,
+                custom_category_id: customCategoryId || null,
+                images: [],
+                start_date: startDate,
+                end_date: endDate,
+                status: 'active',
+                created_by: user?.id,
+              });
+
+              if (!error) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } catch (err) {
+              failCount++;
             }
           }
 
-          const images = row.image_url ? row.image_url.split(',').map((url: string) => url.trim()) : [];
-          const startDate = new Date().toISOString();
-          const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-          const { error } = await supabase
-            .from('listings')
-            .insert({
-              title: row.title,
-              description: row.description || '',
-              location: row.location,
-              price: row.price ? parseFloat(row.price) : null,
-              type: row.type || 'offer',
-              category: row.category || 'hotel',
-              custom_category_id: categoryId,
-              images: images,
-              start_date: startDate,
-              end_date: endDate,
-              status: 'active',
-              created_by: user?.id,
-            });
-
-          if (!error) {
-            successCount++;
-          } else {
-            failCount++;
+          setImportMessage(`Import complete: ${successCount} listings added, ${failCount} failed`);
+          if (successCount > 0) {
+            fetchStats();
+            fetchListings();
           }
         } catch (err) {
-          failCount++;
+          setImportMessage('Error processing file. Please ensure it matches the template format.');
+          console.error('Import error:', err);
+        } finally {
+          setImportLoading(false);
         }
-      }
-
-      setImportMessage(`Import complete: ${successCount} listings added, ${failCount} failed`);
-      if (successCount > 0) {
-        fetchStats();
-        fetchListings();
-      }
-    } catch (err) {
-      setImportMessage('Error reading file. Please ensure it is a valid CSV file.');
-      console.error('Import error:', err);
-    } finally {
-      setImportLoading(false);
-    }
+      },
+      error: (error: any) => {
+        setImportMessage(`Error parsing CSV: ${error.message}`);
+        setImportLoading(false);
+      },
+    });
   };
 
   const handlePromoteToAdmin = async () => {
@@ -1163,8 +1216,9 @@ export default function AdminDashboard() {
                 </div>
                 <button
                   onClick={generateCsvTemplate}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm"
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
                 >
+                  <Download className="w-4 h-4" />
                   Download CSV Template
                 </button>
               </div>

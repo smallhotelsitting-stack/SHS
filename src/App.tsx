@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LanguageRouter from './components/LanguageRouter';
 import Layout from './components/Layout';
 import Home from './pages/Home';
+import AllListings from './pages/AllListings';
 import Concept from './pages/Concept';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -35,6 +36,15 @@ function App() {
                 element={
                   <Layout>
                     <Home />
+                  </Layout>
+                }
+              />
+
+              <Route
+                path="/:lang/all-listings"
+                element={
+                  <Layout>
+                    <AllListings />
                   </Layout>
                 }
               />

@@ -6,13 +6,33 @@ interface EmptyStateProps {
   type?: ListingType;
   category?: ListingCategory;
   searchTerm?: string;
+  customCategory?: any;
 }
 
-export function EmptyState({ type = 'offer', category = 'house', searchTerm }: EmptyStateProps) {
+export function EmptyState({ type = 'offer', category = 'house', searchTerm, customCategory }: EmptyStateProps) {
   const navigate = useNavigate();
 
   const getEmptyStateContent = () => {
     const searchMsg = searchTerm ? ` matching "${searchTerm}"` : '';
+
+    if (customCategory) {
+      const quirkyMessages: { [key: string]: string } = {
+        'vehicles': "No Vehicles found? That's wheely strange! 🚗",
+        'pets': 'No Pet listings found yet! 🐾',
+        'boats': 'The waters are empty... 🚤',
+        'bicycles': "That's un-bike-lievable! 🚲",
+      };
+
+      const quirkyMsg = quirkyMessages[customCategory.slug] ||
+        `No ${customCategory.name} found? That's strange! 🤔`;
+
+      return {
+        icon: Ghost,
+        title: quirkyMsg,
+        message: `No listings in ${customCategory.name} yet. Be the first!`,
+        emoji: '✨',
+      };
+    }
 
     if (type === 'offer' && category === 'hotel') {
       return {

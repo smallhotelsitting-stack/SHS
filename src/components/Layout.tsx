@@ -247,6 +247,13 @@ export default function Layout({ children }: LayoutProps) {
                     {t('nav.browse')}
                   </Link>
                   <Link
+                    to={`/${currentLang}/all-listings`}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-3 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors font-medium"
+                  >
+                    {t('nav.allListings') || 'All Listings'}
+                  </Link>
+                  <Link
                     to={`/${currentLang}/inbox`}
                     onClick={() => setMenuOpen(false)}
                     className="block px-4 py-3 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors font-medium"
@@ -309,6 +316,13 @@ export default function Layout({ children }: LayoutProps) {
                     className="block px-4 py-3 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors font-medium"
                   >
                     {t('nav.browse')}
+                  </Link>
+                  <Link
+                    to={`/${currentLang}/all-listings`}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-3 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors font-medium"
+                  >
+                    {t('nav.allListings') || 'All Listings'}
                   </Link>
                   <Link
                     to={`/${currentLang}/concept`}
