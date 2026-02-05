@@ -78,6 +78,11 @@ export default function ListingDetail() {
       return;
     }
 
+    if (!hasFeature('can_reply_messages')) {
+      navigate(`/${currentLang}`);
+      return;
+    }
+
     const { data: existingThread } = await (supabase
       .from('message_threads') as any)
       .select('id')
@@ -250,22 +255,30 @@ export default function ListingDetail() {
               </div>
 
               {!isOwner && (
-                hasFeature('can_reply_messages') ? (
+                !user ? (
+                  <button
+                    onClick={() => navigate(`/${currentLang}/login`)}
+                    className="flex items-center gap-3 px-8 py-4 bg-primary-600 text-white hover:bg-primary-700 transition font-medium rounded-full"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    Sign In to Contact
+                  </button>
+                ) : hasFeature('can_reply_messages') ? (
                   <button
                     onClick={handleContact}
                     className="flex items-center gap-3 px-8 py-4 bg-secondary-500 text-white hover:bg-secondary-600 transition font-medium rounded-full"
                   >
                     <MessageSquare className="w-5 h-5" />
-                    {user ? t('listing.contact') : 'Sign In to Contact'}
+                    {t('listing.contact')}
                   </button>
                 ) : (
-                  <Link
-                    to="/profile"
+                  <button
+                    onClick={handleContact}
                     className="flex items-center gap-3 px-8 py-4 bg-amber-500 text-white hover:bg-amber-600 transition font-medium rounded-full"
                   >
                     <MessageSquare className="w-5 h-5" />
                     Upgrade to Contact
-                  </Link>
+                  </button>
                 )
               )}
             </div>

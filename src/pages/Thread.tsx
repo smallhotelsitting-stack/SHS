@@ -15,8 +15,9 @@ type ThreadWithDetails = MessageThread & {
 
 export default function Thread() {
   const { t, getLocale, language } = useLanguage();
-  const { id } = useParams<{ id: string }>();
+  const { id, lang } = useParams<{ id: string; lang?: string }>();
   const { user, hasFeature } = useAuth();
+  const currentLang = lang || language;
   const [thread, setThread] = useState<ThreadWithDetails | null>(null);
   const [messages, setMessages] = useState<(Message & { sender: Profile })[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -109,6 +110,11 @@ export default function Thread() {
     e.preventDefault();
     if (!newMessage.trim() || !id || !user) return;
 
+    if (!hasFeature('can_reply_messages')) {
+      alert('You need an active subscription to send messages');
+      return;
+    }
+
     setSending(true);
 
     const { error } = await (supabase
@@ -142,7 +148,7 @@ export default function Thread() {
     return (
       <div className="bg-white rounded-xl shadow-md p-12 text-center">
         <p className="text-warm-600 text-lg">Thread not found</p>
-        <Link to="/inbox" className="text-primary-600 hover:text-primary-700 font-medium mt-4 inline-block">
+        <Link to={`/${currentLang}/inbox`} className="text-primary-600 hover:text-primary-700 font-medium mt-4 inline-block">
           Back to inbox
         </Link>
       </div>
@@ -156,7 +162,7 @@ export default function Thread() {
       <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col h-[calc(100vh-12rem)]">
         <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white p-6">
           <Link
-            to="/inbox"
+            to={`/${currentLang}/inbox`}
             className="inline-flex items-center gap-2 text-primary-100 hover:text-white mb-4 transition"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -170,7 +176,7 @@ export default function Thread() {
             <div>
               <h1 className="text-2xl font-bold">{otherUser.name}</h1>
               <Link
-                to={`/listings/${thread.listing.id}`}
+                to={`/${currentLang}/listing/${thread.listing.slug}`}
                 className="text-primary-100 hover:text-white text-sm transition"
               >
                 Re: {getTranslatedContent(
@@ -243,10 +249,10 @@ export default function Thread() {
               Upgrade your plan to reply to messages and connect with others.
             </p>
             <Link
-              to="/profile"
+              to={`/${currentLang}`}
               className="inline-block bg-amber-600 text-white px-6 py-2 rounded-full font-bold hover:bg-amber-700 transition shadow-md"
             >
-              See Pricing
+              View Plans & Pricing
             </Link>
           </div>
         )}
