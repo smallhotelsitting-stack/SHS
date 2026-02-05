@@ -7,6 +7,7 @@ import { MapPin, Calendar, MessageSquare, Edit, Trash2, ArrowLeft } from 'lucide
 import { getTranslatedContent, type ListingTranslations } from '../utils/translations';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import MediaCarousel from '../components/MediaCarousel';
+import SubscriptionBadge from '../components/SubscriptionBadge';
 import type { Listing, Profile } from '../types/database';
 
 type ListingWithAuthor = Listing & { author: Profile };
@@ -14,7 +15,7 @@ type ListingWithAuthor = Listing & { author: Profile };
 export default function ListingDetail() {
   const { t, formatDate, language } = useLanguage();
   const { id, slug, lang } = useParams<{ id?: string; slug?: string; lang?: string }>();
-  const { user, profile } = useAuth();
+  const { user, profile, hasFeature } = useAuth();
   const navigate = useNavigate();
   const currentLang = lang || language;
   const [listing, setListing] = useState<ListingWithAuthor | null>(null);
@@ -55,8 +56,8 @@ export default function ListingDetail() {
 
     setDeleting(true);
 
-    const { error } = await supabase
-      .from('listings')
+    const { error } = await (supabase
+      .from('listings') as any)
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', listing.id);
 
@@ -77,8 +78,8 @@ export default function ListingDetail() {
       return;
     }
 
-    const { data: existingThread } = await supabase
-      .from('message_threads')
+    const { data: existingThread } = await (supabase
+      .from('message_threads') as any)
       .select('id')
       .eq('listing_id', listing.id)
       .eq('guest_id', user.id)
@@ -87,8 +88,8 @@ export default function ListingDetail() {
     if (existingThread) {
       navigate(`/${currentLang}/inbox/${existingThread.id}`);
     } else {
-      const { data: newThread, error } = await supabase
-        .from('message_threads')
+      const { data: newThread, error } = await (supabase
+        .from('message_threads') as any)
         .insert({
           listing_id: listing.id,
           guest_id: user.id,
@@ -131,7 +132,7 @@ export default function ListingDetail() {
 
   const translatedContent = getTranslatedContent(
     { title: listing.title, description: listing.description, location: listing.location },
-    listing.translations as ListingTranslations | null,
+    listing.translations as any as ListingTranslations | null,
     language
   );
 
@@ -171,11 +172,10 @@ export default function ListingDetail() {
                 <span>
                   {listing.category.charAt(0).toUpperCase() + listing.category.slice(1)}
                 </span>
-                <span className={`px-4 py-1 text-xs font-medium uppercase tracking-wider ${
-                  listing.status === 'active' ? 'bg-green-100 text-green-800' :
+                <span className={`px-4 py-1 text-xs font-medium uppercase tracking-wider ${listing.status === 'active' ? 'bg-green-100 text-green-800' :
                   listing.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-neutral-100 text-neutral-800'
-                }`}>
+                    'bg-neutral-100 text-neutral-800'
+                  }`}>
                   {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
                 </span>
               </div>
@@ -239,7 +239,10 @@ export default function ListingDetail() {
                 </div>
                 <div>
                   <p className="text-xs text-neutral-500 uppercase tracking-wider mb-1">{t('home.postedBy')}</p>
-                  <p className="text-2xl font-light text-neutral-900">{listing.author.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-light text-neutral-900">{listing.author.name}</p>
+                    <SubscriptionBadge subscriptionStatus={listing.author.subscription_status} size="md" />
+                  </div>
                   {listing.author.bio && (
                     <p className="text-sm text-neutral-600 mt-2">{listing.author.bio}</p>
                   )}
@@ -247,13 +250,23 @@ export default function ListingDetail() {
               </div>
 
               {!isOwner && (
-                <button
-                  onClick={handleContact}
-                  className="flex items-center gap-3 px-8 py-4 bg-secondary-500 text-white hover:bg-secondary-600 transition font-medium rounded-full"
-                >
-                  <MessageSquare className="w-5 h-5" />
-                  {user ? t('listing.contact') : 'Sign In to Contact'}
-                </button>
+                hasFeature('can_reply_messages') ? (
+                  <button
+                    onClick={handleContact}
+                    className="flex items-center gap-3 px-8 py-4 bg-secondary-500 text-white hover:bg-secondary-600 transition font-medium rounded-full"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    {user ? t('listing.contact') : 'Sign In to Contact'}
+                  </button>
+                ) : (
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-3 px-8 py-4 bg-amber-500 text-white hover:bg-amber-600 transition font-medium rounded-full"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    Upgrade to Contact
+                  </Link>
+                )
               )}
             </div>
           </div>

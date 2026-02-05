@@ -1,13 +1,25 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { Profile } from '../types/database';
+import type { Profile, SubscriptionFeatures } from '../types/database';
+
+export const FREE_TRIAL_FEATURES: SubscriptionFeatures = {
+  max_listings: 1,
+  can_view_listings: true,
+  can_reply_messages: false,
+  can_highlight_listing: false,
+  can_social_promotion: false,
+  has_media_upload: true
+};
 
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   session: Session | null;
   loading: boolean;
+  features: SubscriptionFeatures;
+  planName: string | null;
+  hasFeature: (feature: keyof SubscriptionFeatures) => boolean;
   signUp: (email: string, password: string, name: string, role: 'guest' | 'host') => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -19,13 +31,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [features, setFeatures] = useState<SubscriptionFeatures>(FREE_TRIAL_FEATURES);
+  const [planName, setPlanName] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, subscription_plan:subscription_plans(name, features)')
       .eq('id', userId)
       .is('deleted_at', null)
       .maybeSingle();
@@ -33,6 +47,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('Error fetching profile:', error);
       return null;
+    }
+
+    const typedData = data as any;
+    if (typedData?.subscription_plan && typedData.subscription_status === 'active') {
+      setFeatures(typedData.subscription_plan.features as unknown as SubscriptionFeatures);
+      setPlanName(typedData.subscription_plan.name);
+    } else {
+      setFeatures(FREE_TRIAL_FEATURES);
+      setPlanName(null);
     }
 
     return data;
@@ -107,11 +130,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
   };
 
+  const hasFeature = useCallback((feature: keyof SubscriptionFeatures) => {
+    if (profile?.role === 'admin') return true;
+    const value = features[feature];
+    if (typeof value === 'boolean') return value;
+    return false;
+  }, [features, profile]);
+
   const value = {
     user,
     profile,
     session,
     loading,
+    features,
+    planName,
+    hasFeature,
     signUp,
     signIn,
     signOut,

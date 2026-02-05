@@ -1,0 +1,6 @@
+Favicon files for Small Hotel Sitting
+- favicon-16x16.png (smallest)
+- favicon-32x32.png (small) 
+- favicon-64x64.png (medium)
+- favicon-192x192.png (large)
+- favicon.ico (for older browsers)

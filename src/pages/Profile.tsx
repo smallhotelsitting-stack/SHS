@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { User, Mail, Phone, FileText, Save, Trash2, AlertTriangle } from 'lucide-react';
+import { User, Mail, Phone, Save, Trash2, AlertTriangle } from 'lucide-react';
 import SubscriptionBadge from '../components/SubscriptionBadge';
 
 export default function Profile() {
   const { t } = useLanguage();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, planName } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -40,8 +40,8 @@ export default function Profile() {
     setError('');
     setSuccess(false);
 
-    const { error: updateError } = await supabase
-      .from('profiles')
+    const { error: updateError } = await (supabase
+      .from('profiles') as any)
       .update({
         name: formData.name,
         bio: formData.bio,
@@ -70,8 +70,8 @@ export default function Profile() {
     setLoading(true);
     setError('');
 
-    const { error: insertError } = await supabase
-      .from('data_deletion_requests')
+    const { error: insertError } = await (supabase
+      .from('data_deletion_requests') as any)
       .insert({
         user_id: user.id,
         status: 'pending'
@@ -106,7 +106,7 @@ export default function Profile() {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-3xl font-bold text-warm-900">{t('profile.myProfile')}</h1>
-              <SubscriptionBadge subscriptionStatus={profile.subscription_status} size="lg" showLabel={true} />
+              <SubscriptionBadge subscriptionStatus={profile.subscription_status} planName={planName || undefined} size="lg" showLabel={true} />
             </div>
             <p className="text-warm-600">{t('profile.manageAccount')}</p>
           </div>
@@ -209,11 +209,10 @@ export default function Profile() {
 
           <div className="bg-warm-50 rounded-lg p-4">
             <p className="text-sm font-medium text-warm-700 mb-2">Account Role</p>
-            <span className={`inline-block px-4 py-2 rounded-full font-semibold ${
-              profile.role === 'admin' ? 'bg-red-100 text-red-800' :
+            <span className={`inline-block px-4 py-2 rounded-full font-semibold ${profile.role === 'admin' ? 'bg-red-100 text-red-800' :
               profile.role === 'host' ? 'bg-secondary-100 text-green-800' :
-              'bg-primary-100 text-primary-800'
-            }`}>
+                'bg-primary-100 text-primary-800'
+              }`}>
               {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
             </span>
           </div>

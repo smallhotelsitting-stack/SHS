@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { MessageSquare, User } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { getTranslatedContent, type ListingTranslations } from '../utils/translations';
 import type { MessageThread, Profile, Listing, Message } from '../types/database';
 
@@ -136,7 +136,7 @@ export default function Inbox() {
                       <p className="text-sm text-warm-600 mb-2">
                         Re: {getTranslatedContent(
                           { title: thread.listing.title, description: thread.listing.description, location: thread.listing.location },
-                          thread.listing.translations as ListingTranslations | null,
+                          thread.listing.translations as any as ListingTranslations | null,
                           language
                         ).title}
                       </p>

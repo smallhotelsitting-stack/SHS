@@ -16,7 +16,7 @@ type ThreadWithDetails = MessageThread & {
 export default function Thread() {
   const { t, getLocale, language } = useLanguage();
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, hasFeature } = useAuth();
   const [thread, setThread] = useState<ThreadWithDetails | null>(null);
   const [messages, setMessages] = useState<(Message & { sender: Profile })[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -39,7 +39,7 @@ export default function Thread() {
             table: 'messages',
             filter: `thread_id=eq.${id}`
           },
-          (payload) => {
+          () => {
             fetchMessages();
           }
         )
@@ -68,7 +68,7 @@ export default function Thread() {
     if (error) {
       console.error('Error fetching thread:', error);
     } else {
-      setThread(data as ThreadWithDetails);
+      setThread(data as any as ThreadWithDetails);
     }
 
     setLoading(false);
@@ -93,8 +93,8 @@ export default function Thread() {
   const markMessagesAsRead = async () => {
     if (!id || !user) return;
 
-    await supabase
-      .from('messages')
+    await (supabase
+      .from('messages') as any)
       .update({ read_at: new Date().toISOString() })
       .eq('thread_id', id)
       .neq('sender_id', user.id)
@@ -111,8 +111,8 @@ export default function Thread() {
 
     setSending(true);
 
-    const { error } = await supabase
-      .from('messages')
+    const { error } = await (supabase
+      .from('messages') as any)
       .insert({
         thread_id: id,
         sender_id: user.id,
@@ -198,11 +198,10 @@ export default function Thread() {
                 >
                   <div className={`max-w-xs lg:max-w-md ${isOwn ? 'order-2' : 'order-1'}`}>
                     <div
-                      className={`rounded-2xl px-4 py-3 ${
-                        isOwn
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-white text-warm-900 border border-warm-200'
-                      }`}
+                      className={`rounded-2xl px-4 py-3 ${isOwn
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-white text-warm-900 border border-warm-200'
+                        }`}
                     >
                       <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
                     </div>
@@ -217,26 +216,40 @@ export default function Thread() {
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSend} className="p-4 border-t border-warm-200 bg-white">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={t('message.typeMessage')}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
-              disabled={sending}
-            />
-            <button
-              type="submit"
-              disabled={sending || !newMessage.trim()}
-              className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        {hasFeature('can_reply_messages') ? (
+          <form onSubmit={handleSend} className="p-4 border-t border-warm-200 bg-white">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder={t('message.typeMessage')}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
+                disabled={sending}
+              />
+              <button
+                type="submit"
+                disabled={sending || !newMessage.trim()}
+                className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Send className="w-5 h-5" />
+                {t('message.send')}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="p-6 border-t border-warm-200 bg-amber-50 text-center">
+            <p className="text-amber-800 font-medium mb-3">
+              Upgrade your plan to reply to messages and connect with others.
+            </p>
+            <Link
+              to="/profile"
+              className="inline-block bg-amber-600 text-white px-6 py-2 rounded-full font-bold hover:bg-amber-700 transition shadow-md"
             >
-              <Send className="w-5 h-5" />
-              {t('message.send')}
-            </button>
+              See Pricing
+            </Link>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );

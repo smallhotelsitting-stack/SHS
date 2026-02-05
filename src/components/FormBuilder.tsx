@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   X,
   Plus,
@@ -7,7 +7,6 @@ import {
   Eye,
   Check,
   AlertCircle,
-  ChevronDown,
 } from 'lucide-react';
 
 export type FormFieldType =
@@ -63,7 +62,6 @@ const FIELD_TYPES: Array<{ value: FormFieldType; label: string }> = [
 
 function DraggableField({
   field,
-  index,
   onUpdate,
   onDelete,
 }: {
@@ -271,8 +269,6 @@ function DraggableField({
 }
 
 function FormPreview({ schema }: { schema: FormSchema }) {
-  const [preview, setPreview] = useState<Record<string, any>>({});
-
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-neutral-900">Form Preview</h3>

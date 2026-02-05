@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Hotel, Home, Coffee, PawPrint } from 'lucide-react';
+import { Hotel, Home } from 'lucide-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ListingCategory } from '../types/database';
 
@@ -94,11 +94,10 @@ export function CategoryCarousel({
                 key={cat.id}
                 type="button"
                 onClick={() => handleStandardCategoryClick(cat.id)}
-                className={`flex-shrink-0 flex items-center gap-3 px-6 py-4 rounded-xl border-2 transition-all whitespace-nowrap ${
-                  isSelected
+                className={`flex-shrink-0 flex items-center gap-3 px-6 py-4 rounded-xl border-2 transition-all whitespace-nowrap ${isSelected
                     ? `${cat.color} text-white border-${cat.color.split('-')[1]}-600 shadow-md`
                     : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
-                }`}
+                  }`}
               >
                 <Icon className="w-6 h-6 flex-shrink-0" />
                 <span className="font-semibold">{cat.label}</span>
@@ -111,11 +110,10 @@ export function CategoryCarousel({
               key={cat.id}
               type="button"
               onClick={() => handleCustomCategoryClick(cat.id)}
-              className={`flex-shrink-0 flex items-center gap-3 px-6 py-4 rounded-xl border-2 transition-all whitespace-nowrap ${
-                value === cat.id
+              className={`flex-shrink-0 flex items-center gap-3 px-6 py-4 rounded-xl border-2 transition-all whitespace-nowrap ${value === cat.id
                   ? 'bg-primary-600 text-white border-primary-700 shadow-md'
                   : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
-              }`}
+                }`}
             >
               <span className="font-semibold">{cat.name}</span>
             </button>

@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, FileText, MessageSquare, Mail, Shield, Trash2, Ban, Flag, Clock, AlertTriangle, Crown, UserPlus, Gem, Calendar, Download } from 'lucide-react';
+import { Users, FileText, MessageSquare, Mail, Shield, Trash2, Ban, Flag, Clock, AlertTriangle, Crown, UserPlus, Gem, Download } from 'lucide-react';
 import { getTranslatedContent, type ListingTranslations } from '../utils/translations';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import Papa from 'papaparse';
-import type { Profile, Listing, UserSubscription, SubscriptionPlan } from '../types/database';
+import type { Profile, Listing, SubscriptionPlan } from '../types/database';
 
 export default function AdminDashboard() {
   const { t, formatDate, language } = useLanguage();
@@ -19,8 +19,7 @@ export default function AdminDashboard() {
   });
   const [users, setUsers] = useState<Profile[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
-  const [activeTab, setActiveTab] = useState<'users' | 'listings' | 'audit' | 'admins' | 'verifications' | 'subscriptions' | 'categories' | 'bulk-import'>('users');
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'users' | 'listings' | 'audit' | 'admins' | 'verifications' | 'subscriptions' | 'categories' | 'bulk-import' | 'communications'>('users');
   const [suspendUserId, setSuspendUserId] = useState<string | null>(null);
   const [suspendReason, setSuspendReason] = useState('');
   const [suspendDays, setSuspendDays] = useState<number>(7);
@@ -37,9 +36,9 @@ export default function AdminDashboard() {
   const [selectedPlanForSub, setSelectedPlanForSub] = useState<string | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [importMessage, setImportMessage] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -90,7 +89,6 @@ export default function AdminDashboard() {
     if (!error && data) {
       setUsers(data);
     }
-    setLoading(false);
   };
 
   const fetchListings = async () => {
@@ -167,8 +165,8 @@ export default function AdminDashboard() {
     const renewalDate = new Date();
     renewalDate.setFullYear(renewalDate.getFullYear() + 1);
 
-    const { error } = await supabase
-      .from('user_subscriptions')
+    const { error } = await (supabase
+      .from('user_subscriptions') as any)
       .upsert({
         user_id: selectedUserForSub,
         subscription_id: selectedPlanForSub,
@@ -189,8 +187,8 @@ export default function AdminDashboard() {
     const selectedUser = users.find(u => u.id === selectedUserForSub);
 
     if (selectedPlan) {
-      await supabase
-        .from('profiles')
+      await (supabase
+        .from('profiles') as any)
         .update({ subscription_status: selectedPlan.slug })
         .eq('id', selectedUserForSub);
     }
@@ -210,8 +208,8 @@ export default function AdminDashboard() {
   };
 
   const handleVerificationApproval = async (docId: string, userId: string, approve: boolean, rejectionReason?: string) => {
-    const { error: updateError } = await supabase
-      .from('verification_documents')
+    const { error: updateError } = await (supabase
+      .from('verification_documents') as any)
       .update({
         status: approve ? 'approved' : 'rejected',
         reviewed_at: new Date().toISOString(),
@@ -225,8 +223,8 @@ export default function AdminDashboard() {
     }
 
     if (approve) {
-      const { error: profileError } = await supabase
-        .from('profiles')
+      const { error: profileError } = await (supabase
+        .from('profiles') as any)
         .update({ is_verified: true })
         .eq('id', userId);
 
@@ -249,8 +247,8 @@ export default function AdminDashboard() {
   };
 
   const logAuditAction = async (action: string, entity: string, entityId: string, oldValues?: any, newValues?: any) => {
-    await supabase
-      .from('audit_logs')
+    await (supabase
+      .from('audit_logs') as any)
       .insert({
         action,
         entity,
@@ -268,8 +266,8 @@ export default function AdminDashboard() {
     const user = users.find(u => u.id === userId);
     const oldRole = user?.role;
 
-    const { error } = await supabase
-      .from('profiles')
+    const { error } = await (supabase
+      .from('profiles') as any)
       .update({ role: newRole })
       .eq('id', userId);
 
@@ -288,8 +286,8 @@ export default function AdminDashboard() {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + suspendDays);
 
-    const { error: suspensionError } = await supabase
-      .from('user_suspensions')
+    const { error: suspensionError } = await (supabase
+      .from('user_suspensions') as any)
       .insert({
         user_id: suspendUserId,
         reason: suspendReason,
@@ -303,8 +301,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    const { error: profileError } = await supabase
-      .from('profiles')
+    const { error: profileError } = await (supabase
+      .from('profiles') as any)
       .update({ is_suspended: true })
       .eq('id', suspendUserId);
 
@@ -321,8 +319,8 @@ export default function AdminDashboard() {
   };
 
   const handleUnsuspendUser = async (userId: string) => {
-    const { error: suspensionError } = await supabase
-      .from('user_suspensions')
+    const { error: suspensionError } = await (supabase
+      .from('user_suspensions') as any)
       .update({ is_active: false })
       .eq('user_id', userId)
       .eq('is_active', true);
@@ -331,8 +329,8 @@ export default function AdminDashboard() {
       console.error('Error deactivating suspension:', suspensionError);
     }
 
-    const { error: profileError } = await supabase
-      .from('profiles')
+    const { error: profileError } = await (supabase
+      .from('profiles') as any)
       .update({ is_suspended: false })
       .eq('id', userId);
 
@@ -348,8 +346,8 @@ export default function AdminDashboard() {
   const handleFlagListing = async () => {
     if (!flagListingId || !flagReason) return;
 
-    const { error } = await supabase
-      .from('listings')
+    const { error } = await (supabase
+      .from('listings') as any)
       .update({ is_flagged: true, flagged_reason: flagReason })
       .eq('id', flagListingId);
 
@@ -365,8 +363,8 @@ export default function AdminDashboard() {
   };
 
   const handleUnflagListing = async (listingId: string) => {
-    const { error } = await supabase
-      .from('listings')
+    const { error } = await (supabase
+      .from('listings') as any)
       .update({ is_flagged: false, flagged_reason: null })
       .eq('id', listingId);
 
@@ -384,8 +382,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    const { error } = await supabase
-      .from('profiles')
+    const { error } = await (supabase
+      .from('profiles') as any)
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', userId);
 
@@ -403,8 +401,8 @@ export default function AdminDashboard() {
     const listing = listings.find(l => l.id === listingId);
     const oldStatus = listing?.status;
 
-    const { error } = await supabase
-      .from('listings')
+    const { error } = await (supabase
+      .from('listings') as any)
       .update({ status: newStatus })
       .eq('id', listingId);
 
@@ -442,8 +440,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    const { error } = await supabase
-      .from('custom_categories')
+    const { error } = await (supabase
+      .from('custom_categories') as any)
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', categoryId);
 
@@ -456,62 +454,60 @@ export default function AdminDashboard() {
     }
   };
 
-  const generateCsvTemplate = () => {
-    const headers = ['Name', 'Listing Title', 'Nationality', 'Experience', 'Country / Location', 'Property Description', 'House Sitting Dates', 'Dates', 'Type of House Sitting'];
-    const examples = [
-      ['Lucia Romano', 'Villa in Tuscany', '', '', 'Tuscany, Italy', 'Beautiful villa with garden and pool', '06/01/2026 – 06/30/2026', '', 'house'],
-      ['', '', '', '', '', '', '', '', ''],
-      ['Maria Rossi', '', 'Italian', '5 years of professional house sitting', '', '', '', 'Giug – Août 2026', 'request'],
+  const exportAllListings = () => {
+    if (listings.length === 0) {
+      alert('No listings to export');
+      return;
+    }
+
+    const headers = [
+      'id',
+      'title',
+      'description',
+      'location',
+      'type',
+      'category',
+      'start_date',
+      'end_date',
+      'status',
+      'images',
+      'author_id'
     ];
 
-    const csv = [headers, ...examples].map(row =>
-      row.map(cell => `"${cell}"`).join(',')
+    const rows = listings.map(listing => [
+      listing.id,
+      listing.title,
+      listing.description || '',
+      listing.location,
+      listing.type,
+      listing.category,
+      listing.start_date ? new Date(listing.start_date).toISOString().split('T')[0] : '',
+      listing.end_date ? new Date(listing.end_date).toISOString().split('T')[0] : '',
+      listing.status,
+      Array.isArray(listing.images) ? listing.images.join('|') : '',
+      listing.author_id
+    ]);
+
+    const csv = [headers, ...rows].map(row =>
+      row.map(cell => {
+        const cellStr = String(cell || '');
+        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+          return `"${cellStr.replace(/"/g, '""')}"`;
+        }
+        return cellStr;
+      }).join(',')
     ).join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'bulk_import_template.csv';
+    link.download = `listings_export_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const parseDate = (dateStr: string): { start: string; end: string } => {
-    if (!dateStr) {
-      const now = new Date();
-      return {
-        start: now.toISOString(),
-        end: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      };
-    }
 
-    const dateParts = dateStr.split('–').map(d => d.trim());
-    if (dateParts.length === 2) {
-      try {
-        const [day1, month1, year1] = dateParts[0].split('/');
-        const [day2, month2, year2] = dateParts[1].split('/');
-
-        const startDate = new Date(parseInt(year1), parseInt(month1) - 1, parseInt(day1));
-        const endDate = new Date(parseInt(year2), parseInt(month2) - 1, parseInt(day2));
-
-        return {
-          start: startDate.toISOString(),
-          end: endDate.toISOString(),
-        };
-      } catch {
-        return {
-          start: new Date().toISOString(),
-          end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        };
-      }
-    }
-
-    return {
-      start: new Date().toISOString(),
-      end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-  };
 
   const handleBulkImport = async (file: File) => {
     setImportLoading(true);
@@ -522,90 +518,83 @@ export default function AdminDashboard() {
       skipEmptyLines: true,
       complete: async (results) => {
         try {
-          let successCount = 0;
+          let updateCount = 0;
+          let insertCount = 0;
           let failCount = 0;
 
           for (const row of results.data as any[]) {
             try {
-              const isListing = row['Listing Title'] && row['Listing Title'].trim();
-              const isSitter = row['Name'] && row['Name'].trim() && !isListing;
+              const id = row.id?.trim();
+              const title = row.title?.trim();
+              const description = row.description?.trim() || '';
+              const location = row.location?.trim();
+              const type = row.type?.trim();
+              const category = row.category?.trim();
+              const price = row.price?.trim() ? parseFloat(row.price) : null;
+              const startDate = row.start_date?.trim() || null;
+              const endDate = row.end_date?.trim() || null;
+              const status = row.status?.trim() || 'active';
+              const images = row.images?.trim() ? row.images.split('|').filter((img: string) => img.trim()) : [];
+              const createdBy = row.created_by?.trim() || user?.id;
 
-              if (!isListing && !isSitter) {
+              if (!title || !location || !type || !category) {
                 failCount++;
                 continue;
               }
 
-              let title, description, location, type, category, customCategoryId, startDate, endDate;
-
-              if (isListing) {
-                title = row['Listing Title']?.trim();
-                location = row['Country / Location']?.trim();
-                description = row['Property Description']?.trim() || '';
-                const typeStr = row['Type of House Sitting']?.trim().toLowerCase();
-
-                type = typeStr === 'sitter' ? 'request' : 'offer';
-                category = typeStr === 'hotel' ? 'hotel' : typeStr === 'sitter' ? 'house' : 'house';
-
-                if (typeStr && !['hotel', 'house', 'sitter'].includes(typeStr)) {
-                  const cat = categories.find((c: any) => c.slug === typeStr);
-                  if (cat) {
-                    customCategoryId = cat.id;
-                    category = 'house';
-                    type = 'offer';
-                  }
-                }
-
-                const dates = parseDate(row['House Sitting Dates']?.trim());
-                startDate = dates.start;
-                endDate = dates.end;
-              } else {
-                title = row['Name']?.trim();
-                description = `${row['Nationality']?.trim() || ''} - ${row['Experience']?.trim() || ''}`.trim();
-                location = 'Online';
-                type = 'request';
-                category = 'house';
-
-                const dates = parseDate(row['Dates']?.trim());
-                startDate = dates.start;
-                endDate = dates.end;
-              }
-
-              if (!title || !location) {
-                failCount++;
-                continue;
-              }
-
-              const { error } = await supabase.from('listings').insert({
+              const listingData = {
                 title,
                 description,
                 location,
                 type,
                 category,
-                custom_category_id: customCategoryId || null,
-                images: [],
+                price,
                 start_date: startDate,
                 end_date: endDate,
-                status: 'active',
-                created_by: user?.id,
-              });
+                status,
+                images,
+                created_by: createdBy,
+              };
 
-              if (!error) {
-                successCount++;
+              if (id) {
+                // Update existing listing
+                const { error } = await (supabase.from('listings') as any)
+                  .update(listingData)
+                  .eq('id', id);
+
+                if (!error) {
+                  updateCount++;
+                } else {
+                  console.error('Update error:', error);
+                  failCount++;
+                }
               } else {
-                failCount++;
+                // Insert new listing
+                const { error } = await (supabase.from('listings') as any)
+                  .insert(listingData);
+
+                if (!error) {
+                  insertCount++;
+                } else {
+                  console.error('Insert error:', error);
+                  failCount++;
+                }
               }
             } catch (err) {
+              console.error('Row processing error:', err);
               failCount++;
             }
           }
 
-          setImportMessage(`Import complete: ${successCount} listings added, ${failCount} failed`);
-          if (successCount > 0) {
+          setImportMessage(
+            `Import complete: ${insertCount} new listings added, ${updateCount} listings updated, ${failCount} failed`
+          );
+          if (insertCount > 0 || updateCount > 0) {
             fetchStats();
             fetchListings();
           }
         } catch (err) {
-          setImportMessage('Error processing file. Please ensure it matches the template format.');
+          setImportMessage('Error processing file. Please ensure it matches the exported format.');
           console.error('Import error:', err);
         } finally {
           setImportLoading(false);
@@ -623,13 +612,13 @@ export default function AdminDashboard() {
 
     const { data, error } = await supabase.rpc('promote_user_to_admin', {
       user_email: promoteEmail
-    });
+    } as any);
 
     if (error) {
       console.error('Error promoting user:', error);
       alert('Failed to promote user: ' + error.message);
-    } else if (data && !data.success) {
-      alert(data.error);
+    } else if (data && !(data as any).success) {
+      alert((data as any).error);
     } else {
       alert(`Successfully promoted ${promoteEmail} to admin`);
       setPromoteEmail('');
@@ -646,17 +635,38 @@ export default function AdminDashboard() {
 
     const { data, error } = await supabase.rpc('demote_admin_to_guest', {
       user_id_param: userId
-    });
+    } as any);
 
     if (error) {
       console.error('Error demoting admin:', error);
       alert('Failed to demote admin: ' + error.message);
-    } else if (data && !data.success) {
-      alert(data.error);
+    } else if (data && !(data as any).success) {
+      alert((data as any).error);
     } else {
       alert(`Successfully removed admin privileges from ${userName}`);
       fetchAdminUsers();
       fetchUsers();
+    }
+  };
+
+  const handleCopyUserEmails = async () => {
+    const emailList = users
+      .map(u => u.email)
+      .filter(Boolean)
+      .join(' ');
+
+    if (!emailList) {
+      alert('No user emails found to copy.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(emailList);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy emails:', err);
+      alert('Failed to copy emails to clipboard.');
     }
   };
 
@@ -725,41 +735,37 @@ export default function AdminDashboard() {
           <div className="flex">
             <button
               onClick={() => setActiveTab('users')}
-              className={`px-6 py-4 font-semibold transition ${
-                activeTab === 'users'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'users'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               {t('admin.usersManagement')}
             </button>
             <button
               onClick={() => setActiveTab('listings')}
-              className={`px-6 py-4 font-semibold transition ${
-                activeTab === 'listings'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'listings'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               {t('admin.listingsManagement')}
             </button>
             <button
               onClick={() => setActiveTab('audit')}
-              className={`px-6 py-4 font-semibold transition ${
-                activeTab === 'audit'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'audit'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               Audit Log
             </button>
             <button
               onClick={() => setActiveTab('admins')}
-              className={`px-6 py-4 font-semibold transition ${
-                activeTab === 'admins'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'admins'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               <span className="flex items-center gap-2">
                 <Crown className="w-4 h-4" />
@@ -768,11 +774,10 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setActiveTab('verifications')}
-              className={`px-6 py-4 font-semibold transition ${
-                activeTab === 'verifications'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'verifications'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               <span className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
@@ -786,11 +791,10 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setActiveTab('subscriptions')}
-              className={`px-6 py-4 font-semibold transition ${
-                activeTab === 'subscriptions'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'subscriptions'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               <span className="flex items-center gap-2">
                 <Gem className="w-4 h-4" />
@@ -799,23 +803,33 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setActiveTab('categories')}
-              className={`px-6 py-4 font-semibold transition ${
-                activeTab === 'categories'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'categories'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               Categories
             </button>
             <button
               onClick={() => setActiveTab('bulk-import')}
-              className={`px-6 py-4 font-semibold transition ${
-                activeTab === 'bulk-import'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'bulk-import'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               Bulk Import
+            </button>
+            <button
+              onClick={() => setActiveTab('communications')}
+              className={`px-6 py-4 font-semibold transition ${activeTab === 'communications'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
+            >
+              <span className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Communications
+              </span>
             </button>
           </div>
         </div>
@@ -994,12 +1008,11 @@ export default function AdminDashboard() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          log.action.includes('DELETE') ? 'bg-red-100 text-red-800' :
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${log.action.includes('DELETE') ? 'bg-red-100 text-red-800' :
                           log.action.includes('SUSPEND') || log.action.includes('FLAG') ? 'bg-orange-100 text-orange-800' :
-                          log.action.includes('UNSUSPEND') || log.action.includes('UNFLAG') ? 'bg-green-100 text-green-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
+                            log.action.includes('UNSUSPEND') || log.action.includes('UNFLAG') ? 'bg-green-100 text-green-800' :
+                              'bg-blue-100 text-blue-800'
+                          }`}>
                           {log.action}
                         </span>
                         <span className="text-sm text-gray-600">{log.entity}</span>
@@ -1100,24 +1113,21 @@ export default function AdminDashboard() {
                 {verificationDocs.map((doc: any) => (
                   <div
                     key={doc.id}
-                    className={`border-2 rounded-lg p-6 ${
-                      doc.status === 'pending' ? 'border-amber-300 bg-amber-50' :
+                    className={`border-2 rounded-lg p-6 ${doc.status === 'pending' ? 'border-amber-300 bg-amber-50' :
                       doc.status === 'approved' ? 'border-green-300 bg-green-50' :
-                      'border-red-300 bg-red-50'
-                    }`}
+                        'border-red-300 bg-red-50'
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-start gap-4">
-                        <div className={`p-3 rounded-lg ${
-                          doc.status === 'pending' ? 'bg-amber-100' :
+                        <div className={`p-3 rounded-lg ${doc.status === 'pending' ? 'bg-amber-100' :
                           doc.status === 'approved' ? 'bg-green-100' :
-                          'bg-red-100'
-                        }`}>
-                          <Shield className={`w-6 h-6 ${
-                            doc.status === 'pending' ? 'text-amber-600' :
+                            'bg-red-100'
+                          }`}>
+                          <Shield className={`w-6 h-6 ${doc.status === 'pending' ? 'text-amber-600' :
                             doc.status === 'approved' ? 'text-green-600' :
-                            'text-red-600'
-                          }`} />
+                              'text-red-600'
+                            }`} />
                         </div>
                         <div>
                           <h4 className="font-bold text-gray-900">{doc.user?.name || 'Unknown User'}</h4>
@@ -1135,11 +1145,10 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        doc.status === 'pending' ? 'bg-amber-200 text-amber-800' :
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${doc.status === 'pending' ? 'bg-amber-200 text-amber-800' :
                         doc.status === 'approved' ? 'bg-green-200 text-green-800' :
-                        'bg-red-200 text-red-800'
-                      }`}>
+                          'bg-red-200 text-red-800'
+                        }`}>
                         {doc.status.toUpperCase()}
                       </span>
                     </div>
@@ -1208,29 +1217,85 @@ export default function AdminDashboard() {
           {activeTab === 'bulk-import' && (
             <div className="space-y-6">
               <div className="mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Bulk Listing Import</h3>
-                <p className="text-sm text-gray-600">Import multiple listings from a CSV file</p>
+                <h3 className="text-lg font-bold text-gray-900">Bulk Listing Management</h3>
+                <p className="text-sm text-gray-600">Export, edit, and import all your listings in Excel format</p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">How to Import</h4>
-                  <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                    <li>Download the CSV template below</li>
-                    <li>Fill in your listing data following the template format</li>
-                    <li>Upload the CSV file to import all listings at once</li>
-                  </ol>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="bg-blue-100 p-3 rounded-lg">
+                    <Download className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-900 mb-2">Excel-Style Workflow</h4>
+                    <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                      <li>Download the current listings as a CSV file</li>
+                      <li>Open in Excel, Google Sheets, or any spreadsheet software</li>
+                      <li>Edit existing listings or add new rows for new listings</li>
+                      <li>Save and upload the file back to sync all changes</li>
+                    </ol>
+                  </div>
                 </div>
+
                 <button
-                  onClick={generateCsvTemplate}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                  onClick={exportAllListings}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold shadow-md"
                 >
-                  <Download className="w-4 h-4" />
-                  Download CSV Template
+                  <Download className="w-5 h-5" />
+                  Download All Listings ({listings.length} total)
                 </button>
               </div>
 
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <h4 className="font-semibold text-gray-900 mb-4">Listings Data Preview</h4>
+                <div className="overflow-x-auto max-h-96 border border-gray-200 rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr className="border-b border-gray-200">
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Title</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Location</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Type</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Category</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Images</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {listings.slice(0, 50).map((listing) => (
+                        <tr key={listing.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2 text-xs font-mono text-gray-500">{listing.id.slice(0, 8)}...</td>
+                          <td className="px-3 py-2 text-gray-900 font-medium max-w-xs truncate">{listing.title}</td>
+                          <td className="px-3 py-2 text-gray-600">{listing.location}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${listing.type === 'offer' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
+                              }`}>
+                              {listing.type}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-gray-600 capitalize">{listing.category}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${listing.status === 'active' ? 'bg-green-100 text-green-800' :
+                              listing.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                              {listing.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-gray-600 text-xs">
+                            {Array.isArray(listing.images) ? listing.images.length : 0} images
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {listings.length > 50 && (
+                  <p className="text-xs text-gray-500 mt-2">Showing first 50 of {listings.length} listings. Download the CSV to see all.</p>
+                )}
+              </div>
+
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">
                 <input
                   type="file"
                   id="csv-upload"
@@ -1245,30 +1310,42 @@ export default function AdminDashboard() {
                   disabled={importLoading}
                 />
                 <label htmlFor="csv-upload" className="cursor-pointer">
-                  <div className="text-gray-600">
-                    <p className="font-semibold mb-1">Click to upload CSV file</p>
-                    <p className="text-sm">or drag and drop</p>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="bg-gray-200 p-4 rounded-full">
+                      <FileText className="w-8 h-8 text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 mb-1">Upload Edited CSV File</p>
+                      <p className="text-sm text-gray-600">Click to select file or drag and drop</p>
+                    </div>
                   </div>
                 </label>
               </div>
 
               {importMessage && (
-                <div className={`p-4 rounded-lg ${importMessage.includes('complete') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                <div className={`p-4 rounded-lg ${importMessage.includes('complete') || importMessage.includes('updated')
+                  ? 'bg-green-50 border border-green-200 text-green-800'
+                  : 'bg-red-50 border border-red-200 text-red-800'
+                  }`}>
                   {importMessage}
                 </div>
               )}
 
-              <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
-                <p className="font-semibold mb-2">CSV Format Requirements:</p>
-                <ul className="space-y-1 text-xs">
-                  <li><strong>title:</strong> Listing title (required)</li>
-                  <li><strong>description:</strong> Listing description</li>
-                  <li><strong>price:</strong> Price (optional, numeric)</li>
-                  <li><strong>location:</strong> Location (required)</li>
-                  <li><strong>image_url:</strong> Comma-separated image URLs</li>
-                  <li><strong>category_slug:</strong> hotels, houses, hotel-sitters, house-sitters, or custom category slug</li>
-                  <li><strong>type:</strong> offer or request</li>
-                </ul>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-semibold mb-1">CSV Format Rules:</p>
+                    <ul className="space-y-1 text-xs">
+                      <li><strong>id:</strong> Keep existing IDs to update listings. Leave blank for new listings.</li>
+                      <li><strong>title, location, type, category:</strong> Required fields.</li>
+                      <li><strong>type:</strong> Must be "offer" or "request".</li>
+                      <li><strong>category:</strong> Use "hotel", "house", etc.</li>
+                      <li><strong>images:</strong> Use pipe (|) to separate multiple image URLs.</li>
+                      <li><strong>dates:</strong> Use YYYY-MM-DD format.</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1358,11 +1435,10 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            sub.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${sub.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                            }`}>
                             {sub.status === 'active' ? 'Active' : 'Inactive'}
                           </span>
                         </td>
@@ -1393,6 +1469,75 @@ export default function AdminDashboard() {
                   <p>No active subscriptions</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'communications' && (
+            <div className="space-y-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900">User Communications</h3>
+                <p className="text-sm text-gray-600">Get a list of all user emails for external broadcasting</p>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm text-center">
+                <div className="max-w-md mx-auto space-y-6">
+                  <div className="bg-blue-50 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto">
+                    <Mail className="w-10 h-10 text-blue-600" />
+                  </div>
+
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Email List Generator</h4>
+                    <p className="text-gray-600">
+                      Click the button below to copy all registered user emails to your clipboard.
+                      Emails are space-separated, ready to be pasted into your email client's BCC field.
+                    </p>
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      onClick={handleCopyUserEmails}
+                      className={`w-full flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] ${copySuccess
+                        ? 'bg-green-600 text-white'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                        }`}
+                    >
+                      {copySuccess ? (
+                        <>
+                          <Shield className="w-6 h-6 animate-bounce" />
+                          Emails Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-6 h-6" />
+                          Copy All {users.length} Emails
+                        </>
+                      )}
+                    </button>
+
+                    {copySuccess && (
+                      <p className="text-green-600 text-sm font-semibold mt-3 animate-fade-in">
+                        Successfully copied to clipboard!
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 flex items-start gap-4">
+                <div className="bg-white p-2 rounded shadow-sm">
+                  <FileText className="w-5 h-5 text-gray-400" />
+                </div>
+                <div className="text-sm text-gray-600">
+                  <p className="font-semibold text-gray-900 mb-1">How to use:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Copy the email list using the button above.</li>
+                    <li>Open your email provider (Gmail, Outlook, etc.).</li>
+                    <li>Compose a new message.</li>
+                    <li>Paste the list into the <strong>BCC</strong> field to protect user privacy.</li>
+                    <li>Send your announcement!</li>
+                  </ol>
+                </div>
+              </div>
             </div>
           )}
         </div>

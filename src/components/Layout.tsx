@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage, languages } from '../contexts/LanguageContext';
+import { useLanguage, languages, type Language } from '../contexts/LanguageContext';
 import { Menu, X, Search, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getTranslatedContent } from '../utils/translations';
@@ -97,46 +97,81 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-white">
-      <nav className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-3 items-center h-28 md:h-32 gap-4">
-              <div className="flex justify-start items-center">
-                <Link to={`/${currentLang}`} className="flex items-center justify-center h-20 md:h-24 w-20 md:w-24 rounded-lg bg-white border-2 border-primary-300 shadow-md hover:shadow-lg hover:scale-110 transition-all overflow-hidden flex-shrink-0">
-                  <img src="/system-images/justlogo.png" alt="Small Hotel Sitting Icon" className="h-full w-full object-contain" />
-                </Link>
-              </div>
+      <nav className="bg-white border-b border-neutral-100 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative flex items-center justify-between h-16 md:h-20 lg:h-24">
+            {/* Left Section: Icon Logo */}
+            <div className="flex items-center">
+              <Link to={`/${currentLang}`} className="flex items-center transition-transform hover:scale-[1.05]">
+                <img
+                  src="/system-images/left_icon_logo.png?v=2"
+                  alt="Small Hotel Sitting Icon"
+                  className="h-12 md:h-16 lg:h-20 w-auto object-contain"
+                />
+              </Link>
+            </div>
 
-              <div className="flex justify-center items-center">
-                <Link
-                  to={`/${currentLang}`}
-                  className="flex items-center justify-center px-2"
-                >
-                  <img
-                    src="/system-images/translogotext.png"
-                    alt="Small Hotel Sitting Logo Text"
-                    className="h-20 md:h-32 lg:h-40 w-auto object-contain"
-                  />
-                </Link>
-              </div>
+            {/* Center Section: Absolute Logo */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[60%] z-10">
+              <Link to={`/${currentLang}`} className="flex items-center transition-transform hover:scale-[1.05]">
+                <img
+                  src="/system-images/banner_logo_v2.png?v=2"
+                  alt="Small Hotel Sitting Logo"
+                  className="h-24 md:h-44 lg:h-64 w-auto object-contain drop-shadow-sm"
+                />
+              </Link>
+            </div>
 
-              <div className="flex items-center justify-end space-x-2 md:space-x-3 flex-shrink-0">
+            {/* Right Section: Actions */}
+            <div className="flex items-center gap-1 md:gap-3 z-20">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="p-2.5 hover:bg-neutral-100 transition-colors rounded-lg"
+                className="p-2.5 hover:bg-neutral-50 transition-colors rounded-full text-neutral-500 hover:text-primary-600"
+                aria-label="Search"
               >
-                <Search className="w-5 h-5 text-neutral-700" />
+                <Search className="w-5 h-5" />
               </button>
 
+              {/* Desktop Auth Section */}
+              <div className="hidden md:flex items-center gap-4">
+                {!user ? (
+                  <>
+                    <Link
+                      to={`/${currentLang}/login`}
+                      className="text-sm font-bold text-neutral-700 hover:text-primary-600 px-2"
+                    >
+                      {t('nav.signIn')}
+                    </Link>
+                    <Link
+                      to={`/${currentLang}/register`}
+                      className="bg-primary-600 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/10 transition-all hover:scale-105"
+                    >
+                      {t('nav.signUp')}
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    to={`/${currentLang}/profile`}
+                    className="flex items-center gap-2 bg-neutral-50 border border-neutral-100 rounded-full px-4 py-1.5 hover:bg-neutral-100 transition-all"
+                  >
+                    <span className="text-sm font-bold text-neutral-700">{profile?.name?.split(' ')[0] || 'Profile'}</span>
+                    <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xs uppercase">
+                      {profile?.name?.[0] || user.email?.[0] || 'U'}
+                    </div>
+                  </Link>
+                )}
+              </div>
+
+              {/* Language Selector */}
               <div className="relative">
                 <button
                   onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
-                  className="flex items-center justify-center w-11 h-11 hover:scale-110 transition-all rounded-xl bg-gradient-to-br from-primary-50 to-secondary-50 border-2 border-primary-300 shadow-md hover:shadow-lg"
+                  className="flex items-center justify-center w-10 h-10 hover:bg-neutral-50 transition-all rounded-full border border-neutral-100 shadow-sm"
                 >
-                  <span className="text-2xl">{languages.find(l => l.code === language)?.flag}</span>
+                  <span className="text-xl leading-none">{languages.find(l => l.code === language)?.flag}</span>
                 </button>
                 {languageMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white shadow-xl border border-neutral-200 rounded-lg py-2 z-50">
+                  <div className="absolute right-0 mt-3 w-48 bg-white shadow-2xl border border-neutral-100 rounded-2xl py-2 z-50">
                     {languages.map((lang) => (
                       <button
                         key={lang.code}
@@ -144,30 +179,25 @@ export default function Layout({ children }: LayoutProps) {
                           setLanguage(lang.code);
                           setLanguageMenuOpen(false);
                         }}
-                        style={language === lang.code ? { backgroundColor: 'rgb(163, 163, 163)' } : {}}
-                        className={`w-full text-left px-4 py-2.5 hover:bg-neutral-50 transition-colors flex items-center space-x-3 ${
-                          language === lang.code ? 'text-neutral-900 font-semibold' : 'text-neutral-700'
-                        }`}
+                        className={`w-full text-left px-4 py-2.5 transition-colors flex items-center space-x-3 hover:bg-neutral-50 ${language === lang.code ? 'text-primary-600 font-bold' : 'text-neutral-700'
+                          }`}
                       >
                         <span className="text-xl">{lang.flag}</span>
-                        <span className="font-medium">{lang.name}</span>
+                        <span className="text-sm font-medium">{lang.name}</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
 
+              {/* Hamburger Menu */}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="p-2.5 hover:bg-neutral-100 transition-colors rounded-lg"
+                className="p-2.5 hover:bg-neutral-50 transition-colors rounded-full text-neutral-500"
+                aria-label="Menu"
               >
-                {menuOpen ? (
-                  <X className="w-6 h-6 text-neutral-700" />
-                ) : (
-                  <Menu className="w-6 h-6 text-neutral-700" />
-                )}
+                {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
-            </div>
             </div>
           </div>
         </div>
@@ -199,7 +229,7 @@ export default function Layout({ children }: LayoutProps) {
                         const content = getTranslatedContent(
                           { title: listing.title, description: listing.description, location: listing.location },
                           listing.translations as any,
-                          currentLang as 'en' | 'fr' | 'es' | 'de' | 'it' | 'pt' | 'nl'
+                          currentLang as Language
                         );
                         return (
                           <button
@@ -365,7 +395,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="max-w-7xl mx-auto">
             <div className="text-center">
               <div className="flex justify-center mb-4">
-                <img src="/system-images/translogotext.png" alt="Small Hotel Sitting Logo Text" className="w-48 md:w-56 object-contain" />
+                <img src="/system-images/banner_logo_v2.png?v=2" alt="Small Hotel Sitting Logo" className="w-56 md:w-64 object-contain" />
               </div>
               <div className="flex justify-center items-center gap-6 mb-4">
                 <Link
@@ -396,6 +426,6 @@ export default function Layout({ children }: LayoutProps) {
       </footer>
 
       <CookieConsent />
-    </div>
+    </div >
   );
 }

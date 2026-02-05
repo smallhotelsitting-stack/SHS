@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Home, Hotel, Coffee, PawPrint, Ghost, ArrowRight } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 import type { ListingType, ListingCategory } from '../types/database';
 
 interface EmptyStateProps {
@@ -11,25 +12,24 @@ interface EmptyStateProps {
 
 export function EmptyState({ type = 'offer', category = 'house', searchTerm, customCategory }: EmptyStateProps) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const getEmptyStateContent = () => {
-    const searchMsg = searchTerm ? ` matching "${searchTerm}"` : '';
-
     if (customCategory) {
       const quirkyMessages: { [key: string]: string } = {
-        'vehicles': "No Vehicles found? That's wheely strange! 🚗",
-        'pets': 'No Pet listings found yet! 🐾',
-        'boats': 'The waters are empty... 🚤',
-        'bicycles': "That's un-bike-lievable! 🚲",
+        'vehicles': t('empty.vehicles.title'),
+        'pets': t('empty.pets.title'),
+        'boats': t('empty.boats.title'),
+        'bicycles': t('empty.bicycles.title'),
       };
 
       const quirkyMsg = quirkyMessages[customCategory.slug] ||
-        `No ${customCategory.name} found? That's strange! 🤔`;
+        t('empty.generic.custom.title').replace('{category}', customCategory.name);
 
       return {
         icon: Ghost,
         title: quirkyMsg,
-        message: `No listings in ${customCategory.name} yet. Be the first!`,
+        message: t('empty.generic.custom.message').replace('{category}', customCategory.name),
         emoji: '✨',
       };
     }
@@ -37,8 +37,10 @@ export function EmptyState({ type = 'offer', category = 'house', searchTerm, cus
     if (type === 'offer' && category === 'hotel') {
       return {
         icon: Hotel,
-        title: 'The hotels are all sleeping... 😴',
-        message: `No hotel listings${searchMsg} here yet!`,
+        title: t('empty.hotel.offer.title'),
+        message: searchTerm
+          ? t('empty.hotel.offer.message').replace('{searchTerm}', searchTerm)
+          : t('empty.hotel.offer.message.nosearch'),
         emoji: '🏨',
       };
     }
@@ -46,8 +48,10 @@ export function EmptyState({ type = 'offer', category = 'house', searchTerm, cus
     if (type === 'offer' && category === 'house') {
       return {
         icon: Home,
-        title: "Nobody's home! 🏠",
-        message: `Be the first to house sit${searchMsg}!`,
+        title: t('empty.house.offer.title'),
+        message: searchTerm
+          ? t('empty.house.offer.message').replace('{searchTerm}', searchTerm)
+          : t('empty.house.offer.message.nosearch'),
         emoji: '🏡',
       };
     }
@@ -55,8 +59,10 @@ export function EmptyState({ type = 'offer', category = 'house', searchTerm, cus
     if (type === 'request' && category === 'hotel') {
       return {
         icon: Coffee,
-        title: 'The hotels are all sleeping... 😴',
-        message: `No hotel sitting requests${searchMsg} here yet!`,
+        title: t('empty.hotel.request.title'),
+        message: searchTerm
+          ? t('empty.hotel.request.message').replace('{searchTerm}', searchTerm)
+          : t('empty.hotel.request.message.nosearch'),
         emoji: '🛎️',
       };
     }
@@ -64,16 +70,20 @@ export function EmptyState({ type = 'offer', category = 'house', searchTerm, cus
     if (type === 'request' && category === 'house') {
       return {
         icon: PawPrint,
-        title: 'Quiet... too quiet. 🐾',
-        message: `No house sitting requests${searchMsg} right now!`,
+        title: t('empty.house.request.title'),
+        message: searchTerm
+          ? t('empty.house.request.message').replace('{searchTerm}', searchTerm)
+          : t('empty.house.request.message.nosearch'),
         emoji: '🏠',
       };
     }
 
     return {
       icon: Ghost,
-      title: "It's a ghost town in here! 👻",
-      message: `No listings${searchMsg} found!`,
+      title: t('empty.generic.title'),
+      message: searchTerm
+        ? t('empty.generic.message').replace('{searchTerm}', searchTerm)
+        : t('empty.generic.message.nosearch'),
       emoji: '👻',
     };
   };
@@ -92,7 +102,7 @@ export function EmptyState({ type = 'offer', category = 'house', searchTerm, cus
         onClick={() => navigate('/create-listing')}
         className="inline-flex items-center gap-3 bg-secondary-500 text-white px-8 py-4 rounded-full font-semibold hover:bg-secondary-600 transition-all shadow-md group"
       >
-        Be the First to Post a Listing
+        {t('empty.action')}
         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
       </button>
     </div>

@@ -10,8 +10,17 @@ export type UserRole = 'guest' | 'host' | 'admin';
 export type ListingType = 'offer' | 'request';
 export type ListingCategory = 'house' | 'hotel';
 export type ListingStatus = 'active' | 'paused' | 'closed';
-export type SubscriptionStatus = 'free' | 'active' | 'cancelled' | 'expired';
+export type SubscriptionStatus = 'free' | 'active' | 'cancelled' | 'expired' | string;
 export type TransactionStatus = 'pending' | 'completed' | 'failed';
+
+export interface SubscriptionFeatures {
+  max_listings: number;
+  can_view_listings: boolean;
+  can_reply_messages: boolean;
+  can_highlight_listing: boolean;
+  can_social_promotion: boolean;
+  has_media_upload: boolean;
+}
 
 export interface Database {
   public: {
@@ -341,7 +350,112 @@ export interface Database {
           updated_at?: string;
         };
       };
+      custom_categories: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          description: string;
+          color: string;
+          created_by: string;
+          created_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          description?: string;
+          color?: string;
+          created_by: string;
+          created_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          description?: string;
+          color?: string;
+          created_by?: string;
+          created_at?: string;
+          deleted_at?: string | null;
+        };
+      };
+      data_deletion_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          status: string;
+          created_at: string;
+          processed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          status?: string;
+          created_at?: string;
+          processed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          status?: string;
+          created_at?: string;
+          processed_at?: string | null;
+        };
+      };
+      listing_form_data: {
+        Row: {
+          id: string;
+          listing_id: string;
+          category_id: string;
+          form_data: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          category_id: string;
+          form_data: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          category_id?: string;
+          form_data?: Json;
+          created_at?: string;
+        };
+      };
+      form_schemas: {
+        Row: {
+          id: string;
+          category_id: string;
+          fields: Json;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          category_id: string;
+          fields: Json;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          category_id?: string;
+          fields?: Json;
+          created_by?: string;
+          created_at?: string;
+        };
+      };
     };
+    Views: {};
+    Functions: {};
+    Enums: {};
+    CompositeTypes: {};
   };
 }
 

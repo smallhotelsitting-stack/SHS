@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
-export type Language = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt';
+export type Language = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'zh' | 'ja';
 
 interface LanguageContextType {
   language: Language;
@@ -21,10 +21,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.signOut': 'Sign Out',
     'nav.signIn': 'Sign In',
     'nav.signUp': 'Sign Up',
+    'nav.allListings': 'Explore listings',
     'home.title': 'Find Your Perfect House Sitting Match',
     'home.subtitle': 'Connect with trusted sitters or find your next adventure',
     'home.search': 'Search by location, title, or description...',
     'home.allListings': 'All Listings',
+    'allListings.title': 'Listings',
+    'allListings.subtitle': 'Find your ideal listing !',
     'home.sitterOffers': 'Sitter Offers',
     'home.sitterRequests': 'Sitter Requests',
     'home.allTypes': 'All Types',
@@ -321,7 +324,28 @@ const translations: Record<Language, Record<string, string>> = {
     'feat_highlight': 'Featured listing',
     'feat_social': 'Social media promotion',
     'terms_cancel': 'Cancel 1 month before renewal',
-    'btn_subscribe': 'Subscribe Now',
+    'empty.vehicles.title': "No Vehicles found? That's wheely strange! 🚗",
+    'empty.pets.title': 'No Pet listings found yet! 🐾',
+    'empty.boats.title': 'The waters are empty... 🚤',
+    'empty.bicycles.title': "That's un-bike-lievable! 🚲",
+    'empty.generic.custom.title': "No {category} found? That's strange! 🤔",
+    'empty.generic.custom.message': 'No listings in {category} yet. Be the first!',
+    'empty.hotel.offer.title': 'The hotels are all sleeping... 😴',
+    'empty.hotel.offer.message': 'No hotel listings matching "{searchTerm}" here yet!',
+    'empty.hotel.offer.message.nosearch': 'No hotel listings here yet!',
+    'empty.house.offer.title': "Nobody's home! 🏠",
+    'empty.house.offer.message': 'Be the first to house sit matching "{searchTerm}"!',
+    'empty.house.offer.message.nosearch': 'Be the first to house sit!',
+    'empty.hotel.request.title': 'The hotels are all sleeping... 😴',
+    'empty.hotel.request.message': 'No hotel sitting requests matching "{searchTerm}" here yet!',
+    'empty.hotel.request.message.nosearch': 'No hotel sitting requests here yet!',
+    'empty.house.request.title': 'Quiet... too quiet. 🐾',
+    'empty.house.request.message': 'No house sitting requests matching "{searchTerm}" right now!',
+    'empty.house.request.message.nosearch': 'No house sitting requests right now!',
+    'empty.generic.title': "It's a ghost town in here! 👻",
+    'empty.generic.message': 'No listings matching "{searchTerm}" found!',
+    'empty.generic.message.nosearch': 'No listings found!',
+    'empty.action': 'Be the First to Post a Listing',
   },
   es: {
     'nav.browse': 'Explorar',
@@ -333,10 +357,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.signOut': 'Cerrar Sesión',
     'nav.signIn': 'Iniciar Sesión',
     'nav.signUp': 'Registrarse',
+    'nav.allListings': 'Explorar anuncios',
     'home.title': 'Encuentra Tu Cuidador de Casa Perfecto',
     'home.subtitle': 'Conecta con cuidadores confiables o encuentra tu próxima aventura',
     'home.search': 'Buscar por ubicación, título o descripción...',
     'home.allListings': 'Todos',
+    'allListings.title': 'Anuncios',
+    'allListings.subtitle': '¡ Encuentra tu anuncio ideal !',
     'home.sitterOffers': 'Ofrece Cuidado',
     'home.sitterRequests': 'Busca Cuidador',
     'home.allTypes': 'Todos los Tipos',
@@ -645,10 +672,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.signOut': 'Déconnexion',
     'nav.signIn': 'Connexion',
     'nav.signUp': "S'inscrire",
+    'nav.allListings': 'Explorer les annonces',
     'home.title': 'Trouvez Votre Gardien de Maison Parfait',
     'home.subtitle': 'Connectez-vous avec des gardiens de confiance',
     'home.search': 'Rechercher par lieu, titre ou description...',
     'home.allListings': 'Toutes',
+    'allListings.title': 'Annonces',
+    'allListings.subtitle': 'Trouvez votre annonce idéale !',
     'home.sitterOffers': 'Offres',
     'home.sitterRequests': 'Demandes',
     'home.allTypes': 'Tous',
@@ -957,10 +987,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.signOut': 'Abmelden',
     'nav.signIn': 'Anmelden',
     'nav.signUp': 'Registrieren',
+    'nav.allListings': 'Anzeigen erkunden',
     'home.title': 'Finden Sie Ihren Perfekten Haussitter',
     'home.subtitle': 'Verbinden Sie sich mit vertrauenswürdigen Sittern',
     'home.search': 'Nach Ort, Titel oder Beschreibung suchen...',
     'home.allListings': 'Alle',
+    'allListings.title': 'Anzeigen',
+    'allListings.subtitle': 'Finden Sie Ihr ideales Angebot !',
     'home.sitterOffers': 'Angebote',
     'home.sitterRequests': 'Anfragen',
     'home.allTypes': 'Alle Typen',
@@ -1269,10 +1302,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.signOut': 'Esci',
     'nav.signIn': 'Accedi',
     'nav.signUp': 'Registrati',
+    'nav.allListings': 'Esplora gli annunci',
     'home.title': 'Trova il Tuo House Sitter Perfetto',
     'home.subtitle': 'Connettiti con sitter fidati',
     'home.search': 'Cerca per posizione, titolo o descrizione...',
     'home.allListings': 'Tutti',
+    'allListings.title': 'Annunci',
+    'allListings.subtitle': 'Trova il tuo annuncio ideale !',
     'home.sitterOffers': 'Offerte',
     'home.sitterRequests': 'Richieste',
     'home.allTypes': 'Tutti i Tipi',
@@ -1581,10 +1617,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.signOut': 'Sair',
     'nav.signIn': 'Entrar',
     'nav.signUp': 'Cadastrar',
+    'nav.allListings': 'Explorar anúncios',
     'home.title': 'Encontre Seu Cuidador de Casa Perfeito',
     'home.subtitle': 'Conecte-se com cuidadores confiáveis',
     'home.search': 'Buscar por localização, título ou descrição...',
     'home.allListings': 'Todos',
+    'allListings.title': 'Anúncios',
+    'allListings.subtitle': 'Encontre seu anúncio ideal !',
     'home.sitterOffers': 'Ofertas',
     'home.sitterRequests': 'Pedidos',
     'home.allTypes': 'Todos os Tipos',
@@ -1883,6 +1922,8 @@ const translations: Record<Language, Record<string, string>> = {
     'terms_cancel': 'Cancelar 1 mês antes da renovação',
     'btn_subscribe': 'Assinar agora',
   },
+  zh: {},
+  ja: {},
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -1890,7 +1931,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
     const pathLang = window.location.pathname.split('/')[1] as Language;
-    if (['en', 'es', 'fr', 'de', 'it', 'pt'].includes(pathLang)) {
+    if (['en', 'es', 'fr', 'de', 'it', 'pt', 'zh', 'ja'].includes(pathLang)) {
       localStorage.setItem('language', pathLang);
       return pathLang;
     }
@@ -1921,7 +1962,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       fr: 'fr-FR',
       de: 'de-DE',
       it: 'it-IT',
-      pt: 'pt-PT'
+      pt: 'pt-PT',
+      zh: 'zh-CN',
+      ja: 'ja-JP'
     };
     return localeMap[language];
   };
@@ -1957,4 +2000,6 @@ export const languages = [
   { code: 'de' as Language, name: 'Deutsch', flag: '🇩🇪' },
   { code: 'it' as Language, name: 'Italiano', flag: '🇮🇹' },
   { code: 'pt' as Language, name: 'Português', flag: '🇵🇹' },
+  { code: 'zh' as Language, name: '中文', flag: '🇨🇳' },
+  { code: 'ja' as Language, name: '日本語', flag: '🇯🇵' },
 ];

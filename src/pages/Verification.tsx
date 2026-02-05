@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { Shield, Upload, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 
@@ -13,8 +12,9 @@ type VerificationDocument = {
   submitted_at: string;
 };
 
+import type { UserRole } from '../types/database';
+
 export default function Verification() {
-  const { t } = useLanguage();
   const { user, profile, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -80,8 +80,8 @@ export default function Verification() {
       .from('verification-documents')
       .getPublicUrl(fileName);
 
-    const { error: insertError } = await supabase
-      .from('verification_documents')
+    const { error: insertError } = await (supabase
+      .from('verification_documents') as any)
       .insert({
         user_id: user.id,
         document_type: selectedType,
@@ -156,7 +156,7 @@ export default function Verification() {
           </div>
         </div>
 
-        {profile.is_verified && (
+        {(profile as any).is_verified && (
           <div className="mb-8 p-4 bg-secondary-100 border-l-4 border-secondary-600 rounded-lg">
             <div className="flex items-center gap-3">
               <CheckCircle className="w-6 h-6 text-secondary-600" />
@@ -168,7 +168,7 @@ export default function Verification() {
           </div>
         )}
 
-        {!hasApprovedDoc && profile.role === 'sitter' && (
+        {!hasApprovedDoc && profile.role === ('sitter' as UserRole) && (
           <div className="mb-8 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-lg">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-6 h-6 text-amber-600 mt-0.5" />

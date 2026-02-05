@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Home, Hotel, Upload, X, Image, Video, AlertCircle } from 'lucide-react';
+import { Upload, X, Image, Video, AlertCircle } from 'lucide-react';
 import { translateToAllLanguages } from '../utils/translations';
 import { DynamicFormRenderer } from '../components/DynamicFormRenderer';
 import { CategoryCarousel } from '../components/CategoryCarousel';
@@ -12,8 +12,10 @@ import type { FormField } from '../components/FormBuilder';
 
 export default function CreateListing() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, profile, features } = useAuth();
   const navigate = useNavigate();
+  const [listingCount, setListingCount] = useState(0);
+  const [isCheckingLimit, setIsCheckingLimit] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,7 +43,24 @@ export default function CreateListing() {
 
   useEffect(() => {
     fetchCustomCategories();
-  }, []);
+    fetchListingCount();
+  }, [user]);
+
+  const fetchListingCount = async () => {
+    if (!user) return;
+    const { count, error } = await supabase
+      .from('listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('author_id', user.id)
+      .is('deleted_at', null);
+
+    if (error) {
+      console.error('Error fetching listing count:', error);
+    } else {
+      setListingCount(count || 0);
+    }
+    setIsCheckingLimit(false);
+  };
 
   const fetchCustomCategories = async () => {
     const { data, error } = await supabase
@@ -66,7 +85,7 @@ export default function CreateListing() {
 
     const fetchFormSchema = async () => {
       const { data, error } = await supabase
-        .from('form_schemas')
+        .from('form_schemas' as any)
         .select('fields')
         .eq('category_id', selectedCustomCategoryId)
         .single();
@@ -75,7 +94,7 @@ export default function CreateListing() {
         console.error('Error fetching form schema:', error);
         setFormSchema([]);
       } else {
-        setFormSchema(data?.fields || []);
+        setFormSchema((data as any)?.fields || []);
         setCustomFormData({});
       }
     };
@@ -136,7 +155,7 @@ export default function CreateListing() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('listing-media')
         .upload(fileName, file);
 
@@ -203,8 +222,8 @@ export default function CreateListing() {
         custom_category_id: selectedCustomCategoryId || null,
       };
 
-      const { data, error: insertError} = await supabase
-        .from('listings')
+      const { data, error: insertError } = await (supabase
+        .from('listings') as any)
         .insert(listingInsert)
         .select()
         .single();
@@ -216,8 +235,8 @@ export default function CreateListing() {
       }
 
       if (selectedCustomCategoryId && Object.keys(customFormData).length > 0) {
-        const { data: formDataRecord, error: formDataError } = await supabase
-          .from('listing_form_data')
+        const { data: formDataRecord, error: formDataError } = await (supabase
+          .from('listing_form_data' as any) as any)
           .insert({
             listing_id: data.id,
             category_id: selectedCustomCategoryId,
@@ -229,8 +248,8 @@ export default function CreateListing() {
         if (formDataError) {
           console.error('Error saving form data:', formDataError);
         } else {
-          await supabase
-            .from('listings')
+          await (supabase
+            .from('listings') as any)
             .update({ form_data_id: formDataRecord.id })
             .eq('id', data.id);
         }
@@ -255,6 +274,27 @@ export default function CreateListing() {
           </div>
         )}
 
+        {!isCheckingLimit && listingCount >= features.max_listings && profile?.role !== 'admin' && (
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-6 mb-8 rounded-r-xl">
+            <div className="flex gap-3">
+              <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
+              <div>
+                <h3 className="font-bold text-amber-900 mb-1">Listing Limit Reached</h3>
+                <p className="text-amber-800 text-sm mb-4">
+                  Your current plan allows for up to {features.max_listings} active {features.max_listings === 1 ? 'listing' : 'listings'}.
+                  You've already reached this limit.
+                </p>
+                <button
+                  onClick={() => navigate(`/${profile?.role === 'admin' ? 'en' : 'profile'}`)} // Link to pricing/profile
+                  className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-700 transition"
+                >
+                  Upgrade Plan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-10">
           <div>
             <label className="block text-xs font-medium text-neutral-500 mb-4 uppercase tracking-wider">
@@ -264,11 +304,10 @@ export default function CreateListing() {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, type: 'offer' })}
-                className={`p-6 border-2 transition ${
-                  formData.type === 'offer'
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
+                className={`p-6 border-2 transition ${formData.type === 'offer'
+                  ? 'border-primary-600 bg-primary-50'
+                  : 'border-neutral-200 hover:border-neutral-300'
+                  }`}
               >
                 <p className={`font-medium text-lg mb-2 ${formData.type === 'offer' ? 'text-primary-900' : 'text-neutral-900'}`}>
                   {t('create.offeringServices')}
@@ -279,11 +318,10 @@ export default function CreateListing() {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, type: 'request' })}
-                className={`p-6 border-2 transition ${
-                  formData.type === 'request'
-                    ? 'border-secondary-600 bg-secondary-50'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
+                className={`p-6 border-2 transition ${formData.type === 'request'
+                  ? 'border-secondary-600 bg-secondary-50'
+                  : 'border-neutral-200 hover:border-neutral-300'
+                  }`}
               >
                 <p className={`font-medium text-lg mb-2 ${formData.type === 'request' ? 'text-secondary-900' : 'text-neutral-900'}`}>
                   {t('create.requestingSitter')}
@@ -558,7 +596,7 @@ export default function CreateListing() {
           <div className="flex gap-4 pt-6">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (listingCount >= features.max_listings && profile?.role !== 'admin')}
               className="flex-1 bg-neutral-900 text-white py-4 font-medium hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? `${t('create.createListing')}...` : t('create.createListing')}

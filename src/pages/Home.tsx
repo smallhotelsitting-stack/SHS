@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Search, MapPin, Calendar, Hotel, Briefcase, ArrowRight, Star, Shield, Users, CheckCircle, Globe, Mail, Send, X, Home as HomeIcon, SlidersHorizontal } from 'lucide-react';
+import { Search, MapPin, Calendar, Hotel, Briefcase, ArrowRight, Star, Shield, CheckCircle, Globe, Mail, Send, X, SlidersHorizontal } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getTranslatedContent, type ListingTranslations } from '../utils/translations';
@@ -9,14 +9,14 @@ import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import { EmptyState } from '../components/EmptyState';
 import PricingSection from '../components/PricingSection';
 import SubscriptionBadge from '../components/SubscriptionBadge';
-import { CreateCategoryModal, AdminCategoryButton, CategoryPill } from '../components/AdminCategoryManager';
+import { CreateCategoryModal, AdminCategoryButton } from '../components/AdminCategoryManager';
 import { FormBuilder, type FormSchema } from '../components/FormBuilder';
 import type { Listing, Profile } from '../types/database';
 
 type ListingWithAuthor = Listing & { author: Profile };
 
 export default function Home() {
-  const { t, formatDate, language } = useLanguage();
+  const { t, language } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { lang } = useParams<{ lang: string }>();
@@ -38,7 +38,6 @@ export default function Home() {
   const [selectedCategoryForForm, setSelectedCategoryForForm] = useState<any>(null);
   const [categoryToast, setCategoryToast] = useState('');
   const [selectedCustomCategory, setSelectedCustomCategory] = useState<any>(null);
-  const [combinedFilter, setCombinedFilter] = useState<'all' | 'standard'>('standard');
   const { profile } = useAuth();
 
   useEffect(() => {
@@ -49,7 +48,7 @@ export default function Home() {
         setSelectedCategoryId(cat.id);
         if (cat.type === 'custom') {
           setSelectedCustomCategory(cat);
-          setCombinedFilter('all');
+          setSelectedCustomCategory(cat);
         }
       }
     }
@@ -85,8 +84,8 @@ export default function Home() {
   const handleDeleteCategory = async (categoryId: string) => {
     if (!window.confirm('Are you sure you want to delete this category?')) return;
 
-    const { error } = await supabase
-      .from('custom_categories')
+    const { error } = await (supabase
+      .from('custom_categories') as any)
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', categoryId);
 
@@ -106,14 +105,14 @@ export default function Home() {
   const handleCreateCategory = async (categoryName: string) => {
     const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-    const { data, error } = await supabase
-      .from('custom_categories')
+    const { data, error } = await (supabase
+      .from('custom_categories') as any)
       .insert({
         name: categoryName,
         slug,
         description: '',
         color: 'primary',
-        created_by: user?.id,
+        created_by: user!.id,
       })
       .select()
       .single();
@@ -133,12 +132,12 @@ export default function Home() {
   const handleSaveFormSchema = async (schema: FormSchema) => {
     if (!selectedCategoryForForm) return;
 
-    const { error } = await supabase
-      .from('form_schemas')
+    const { error } = await (supabase
+      .from('form_schemas') as any)
       .upsert({
         category_id: selectedCategoryForForm.id,
-        fields: schema.fields,
-        created_by: user?.id,
+        fields: schema.fields as any,
+        created_by: user!.id,
       })
       .select();
 
@@ -317,28 +316,9 @@ export default function Home() {
               <div key={cat.id} className="relative group">
                 <button
                   onClick={() => {
-                    if (selectedCategoryId === cat.id) {
-                      setSelectedCategoryId(null);
-                      setSelectedCustomCategory(null);
-                      setCombinedFilter('standard');
-                      navigate('/', { replace: true });
-                    } else {
-                      setSelectedCategoryId(cat.id);
-                      if (cat.type === 'custom') {
-                        setSelectedCustomCategory(cat);
-                        setCombinedFilter('all');
-                        navigate(`/?category=${cat.slug}`, { replace: true });
-                      } else {
-                        setSelectedCustomCategory(null);
-                        setCombinedFilter('standard');
-                      }
-                    }
+                    navigate(`/${currentLang}/all-listings?category=${cat.slug}`);
                   }}
-                  className={`px-6 py-3 rounded-full font-medium transition-all ${
-                    selectedCategoryId === cat.id
-                      ? 'bg-primary-600 text-white border-primary-600 shadow-md'
-                      : 'bg-white text-neutral-700 hover:bg-neutral-50 border-2 border-neutral-300'
-                  }`}
+                  className={`px-6 py-3 rounded-full font-medium transition-all bg-white text-neutral-700 hover:bg-neutral-50 border-2 border-neutral-300 hover:border-primary-500 hover:text-primary-600 shadow-sm`}
                 >
                   {cat.name}
                 </button>
@@ -477,18 +457,23 @@ export default function Home() {
                     description: listing.description,
                     location: listing.location,
                   },
-                  listing.translations as ListingTranslations,
+                  listing.translations as any as ListingTranslations,
                   language
                 );
 
                 const colors = getCategoryColor(listing.type, listing.category);
                 const label = getCategoryLabel(listing.type, listing.category);
 
+                const isPremium = listing.author.subscription_status?.toLowerCase() === 'premium';
+
                 return (
                   <Link
                     key={listing.id}
                     to={`/${currentLang}/listing/${listing.slug}`}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-300"
+                    className={`group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 border-2 ${isPremium
+                      ? 'border-blue-400/50 shadow-blue-100/50 scale-[1.02] ring-4 ring-blue-50/50'
+                      : 'border-transparent hover:border-primary-100'
+                      }`}
                   >
                     <div className="relative h-56 bg-neutral-200 overflow-hidden">
                       {listing.images && (listing.images as string[]).length > 0 ? (
@@ -538,7 +523,7 @@ export default function Home() {
           {filteredListings.length > 8 && (
             <div className="text-center mt-12">
               <button
-                onClick={() => navigate('/listings')}
+                onClick={() => navigate(`/${currentLang}/all-listings`)}
                 className="inline-flex items-center gap-3 bg-primary-700 text-white px-10 py-4 rounded-full font-semibold hover:bg-primary-800 transition-all group shadow-md"
               >
                 {t('home.viewAllListings')}

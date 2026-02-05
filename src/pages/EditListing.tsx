@@ -39,7 +39,7 @@ export default function EditListing() {
   const fetchListing = async () => {
     if (!id) return;
 
-    const { data, error } = await supabase
+    const { data: rawData, error } = await supabase
       .from('listings')
       .select('*')
       .eq('id', id)
@@ -53,11 +53,13 @@ export default function EditListing() {
       return;
     }
 
-    if (!data) {
+    if (!rawData) {
       setError('Listing not found');
       setLoading(false);
       return;
     }
+
+    const data = rawData as any;
 
     if (data.author_id !== user?.id && profile?.role !== 'admin') {
       setError('You do not have permission to edit this listing');
@@ -129,8 +131,8 @@ export default function EditListing() {
     setError('');
     setSaving(true);
 
-    const { error: updateError } = await supabase
-      .from('listings')
+    const { error: updateError } = await (supabase
+      .from('listings') as any)
       .update({
         title: formData.title,
         description: formData.description,
@@ -191,11 +193,10 @@ export default function EditListing() {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, type: 'offer' })}
-                className={`p-4 border-2 rounded-lg transition ${
-                  formData.type === 'offer'
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
+                className={`p-4 border-2 rounded-lg transition ${formData.type === 'offer'
+                  ? 'border-primary-600 bg-primary-50'
+                  : 'border-gray-300 hover:border-gray-400'
+                  }`}
               >
                 <p className={`font-semibold ${formData.type === 'offer' ? 'text-blue-900' : 'text-warm-900'}`}>
                   {t('create.offeringServices')}
@@ -206,11 +207,10 @@ export default function EditListing() {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, type: 'request' })}
-                className={`p-4 border-2 rounded-lg transition ${
-                  formData.type === 'request'
-                    ? 'border-secondary-600 bg-green-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
+                className={`p-4 border-2 rounded-lg transition ${formData.type === 'request'
+                  ? 'border-secondary-600 bg-green-50'
+                  : 'border-gray-300 hover:border-gray-400'
+                  }`}
               >
                 <p className={`font-semibold ${formData.type === 'request' ? 'text-green-900' : 'text-warm-900'}`}>
                   {t('create.requestingSitter')}
@@ -228,11 +228,10 @@ export default function EditListing() {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, category: 'house' })}
-                className={`flex items-center gap-3 p-4 border-2 rounded-lg transition ${
-                  formData.category === 'house'
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
+                className={`flex items-center gap-3 p-4 border-2 rounded-lg transition ${formData.category === 'house'
+                  ? 'border-primary-600 bg-primary-50'
+                  : 'border-gray-300 hover:border-gray-400'
+                  }`}
               >
                 <Home className={`w-6 h-6 ${formData.category === 'house' ? 'text-primary-600' : 'text-warm-600'}`} />
                 <span className={`font-semibold ${formData.category === 'house' ? 'text-blue-900' : 'text-warm-900'}`}>
@@ -243,11 +242,10 @@ export default function EditListing() {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, category: 'hotel' })}
-                className={`flex items-center gap-3 p-4 border-2 rounded-lg transition ${
-                  formData.category === 'hotel'
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
+                className={`flex items-center gap-3 p-4 border-2 rounded-lg transition ${formData.category === 'hotel'
+                  ? 'border-primary-600 bg-primary-50'
+                  : 'border-gray-300 hover:border-gray-400'
+                  }`}
               >
                 <Hotel className={`w-6 h-6 ${formData.category === 'hotel' ? 'text-primary-600' : 'text-warm-600'}`} />
                 <span className={`font-semibold ${formData.category === 'hotel' ? 'text-blue-900' : 'text-warm-900'}`}>

@@ -24,7 +24,6 @@ export default function MediaManager({
 }: MediaManagerProps) {
   const [dragActive, setDragActive] = useState(false);
 
-  const totalMedia = images.length + videos.length;
   const canAddMore = images.length < maxImages || videos.length < maxVideos;
 
   const handleDrag = (e: React.DragEvent) => {
@@ -124,11 +123,10 @@ export default function MediaManager({
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-lg p-8 transition-colors ${
-            dragActive
+          className={`relative border-2 border-dashed rounded-lg p-8 transition-colors ${dragActive
               ? 'border-primary-500 bg-primary-50'
               : 'border-gray-300 hover:border-primary-400 bg-white'
-          } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+            } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
         >
           <input
             type="file"

@@ -156,16 +156,13 @@ export function CategoryPill({
   onEdit,
   isAdmin,
 }: CategoryPillProps) {
-  const [showEdit, setShowEdit] = useState(false);
-
   return (
     <button
       type="button"
-      className={`relative group inline-flex items-center px-6 py-3 rounded-full font-medium transition-all border-2 ${
-        isSelected
+      className={`relative group inline-flex items-center px-6 py-3 rounded-full font-medium transition-all border-2 ${isSelected
           ? 'bg-primary-600 text-white border-primary-600 shadow-md'
           : 'bg-white text-neutral-700 hover:bg-neutral-50 border-neutral-300'
-      }`}
+        }`}
       onClick={onClick}
     >
       <span>{name}</span>
@@ -173,15 +170,12 @@ export function CategoryPill({
       {isAdmin && (
         <button
           type="button"
-          onMouseEnter={() => setShowEdit(true)}
-          onMouseLeave={() => setShowEdit(false)}
           onClick={(e) => {
             e.stopPropagation();
             onEdit?.();
           }}
-          className={`ml-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded ${
-            isSelected ? 'hover:bg-primary-700' : 'hover:bg-neutral-100'
-          }`}
+          className={`ml-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded ${isSelected ? 'hover:bg-primary-700' : 'hover:bg-neutral-100'
+            }`}
           title="Edit form"
         >
           <Edit2 size={16} className={isSelected ? 'text-white' : 'text-neutral-700'} />
