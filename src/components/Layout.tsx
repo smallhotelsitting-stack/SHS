@@ -27,8 +27,15 @@ export default function Layout({ children }: LayoutProps) {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate(`/${currentLang}/login`);
+    try {
+      setMenuOpen(false);
+      await signOut();
+      navigate(`/${currentLang}/login`, { replace: true });
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Still navigate to login even if there's an error
+      navigate(`/${currentLang}/login`, { replace: true });
+    }
   };
 
   useEffect(() => {
@@ -332,10 +339,7 @@ export default function Layout({ children }: LayoutProps) {
                     {t('nav.verification')}
                   </Link>
                   <button
-                    onClick={() => {
-                      handleSignOut();
-                      setMenuOpen(false);
-                    }}
+                    onClick={handleSignOut}
                     className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 transition-colors font-medium"
                   >
                     {t('nav.signOut')}

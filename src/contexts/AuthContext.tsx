@@ -122,12 +122,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      // Clear state first to ensure UI updates immediately
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      setFeatures(FREE_TRIAL_FEATURES);
+      setPlanName(null);
 
-    setUser(null);
-    setProfile(null);
-    setSession(null);
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+        // Don't throw - we've already cleared the local state
+      }
+    } catch (error) {
+      console.error('Unexpected sign out error:', error);
+      // Even if there's an error, ensure we clear local state
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      setFeatures(FREE_TRIAL_FEATURES);
+      setPlanName(null);
+    }
   };
 
   const hasFeature = useCallback((feature: keyof SubscriptionFeatures) => {
